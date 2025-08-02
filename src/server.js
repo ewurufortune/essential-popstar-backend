@@ -7,6 +7,8 @@ const helmet = require('helmet');
 const powerRoutes = require('./routes/power');
 const webhookRoutes = require('./routes/webhooks');
 const adminRoutes = require('./routes/admin');
+const authRoutes = require('./routes/auth');
+const referralRoutes = require('./routes/referrals');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +47,8 @@ app.use((req, res, next) => {
 // API routes
 app.use('/api', powerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/referrals', referralRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -53,10 +57,18 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: 'GET /health',
+      auth: {
+        apple: 'POST /api/auth/apple'
+      },
       power: {
         current: 'GET /api/me/power',
         spend: 'POST /api/me/power/spend',
         history: 'GET /api/me/power/history'
+      },
+      referrals: {
+        code: 'GET /api/referrals/code',
+        claim: 'POST /api/referrals/claim',
+        stats: 'GET /api/referrals/stats'
       },
       webhooks: {
         revenuecat: 'POST /webhooks/revenuecat',

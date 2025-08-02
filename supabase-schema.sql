@@ -1,22 +1,9 @@
 -- Essential Popstar Database Schema
 -- Run this script in your Supabase SQL editor
 
--- Apple authenticated users table
-CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  apple_id TEXT UNIQUE NOT NULL,
-  email TEXT,
-  name TEXT,
-  identity_token TEXT,
-  authorization_code TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  last_sign_in TIMESTAMPTZ
-);
-
--- Users table mirrors your app's user ids (for power system)
+-- Users table for both Apple auth and game system (unified)
 CREATE TABLE app_users (
-  id TEXT PRIMARY KEY, -- Using TEXT instead of UUID for custom user IDs
+  id TEXT PRIMARY KEY, -- Apple user ID or custom user ID
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_active TIMESTAMPTZ DEFAULT now()
 );
@@ -51,7 +38,7 @@ CREATE TABLE power_ledger (
   UNIQUE (user_id, idempotency_key)
 );
 
--- Referral system tables
+-- Referral system tables (integrated with app_users)
 CREATE TABLE referral_codes (
   user_id TEXT PRIMARY KEY REFERENCES app_users(id),
   code TEXT UNIQUE NOT NULL, -- e.g., random string or user id-based
@@ -71,7 +58,7 @@ CREATE TABLE referral_claims (
   CHECK (referrer_id != referred_id) -- prevent self-referral
 );
 
--- Referral rewards tracking
+-- Referral rewards tracking (integrated with app_users)
 CREATE TABLE referral_rewards (
   id BIGSERIAL PRIMARY KEY,
   referrer_id TEXT NOT NULL REFERENCES app_users(id),
@@ -99,7 +86,6 @@ CREATE INDEX idx_referral_claims_ip ON referral_claims(ip_address);
 CREATE INDEX idx_referral_rewards_referrer ON referral_rewards(referrer_id);
 
 -- Enable Row Level Security (RLS)
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE power_balances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE power_ledger ENABLE ROW LEVEL SECURITY;
@@ -108,22 +94,15 @@ ALTER TABLE referral_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referral_claims ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referral_rewards ENABLE ROW LEVEL SECURITY;
 
--- Create policies for users (Apple authentication)
-CREATE POLICY "Allow public read access to users" ON users
-  FOR SELECT USING (true); -- Allow app to read user data
-
-CREATE POLICY "Allow public insert access to users" ON users
-  FOR INSERT WITH CHECK (true); -- Allow app to create users
-
-CREATE POLICY "Allow public update access to users" ON users
-  FOR UPDATE USING (true); -- Allow app to update users
-
--- Create policies for app_users
+-- Create policies for app_users (unified system)
 CREATE POLICY "Users can view their own record" ON app_users
   FOR SELECT USING (true); -- Allow reading for API
 
 CREATE POLICY "Users can insert their own record" ON app_users
   FOR INSERT WITH CHECK (true); -- Allow API to create users
+
+CREATE POLICY "Users can update their own record" ON app_users
+  FOR UPDATE USING (true); -- Allow API to update users
 
 -- Create policies for power_balances
 CREATE POLICY "Users can view their own balance" ON power_balances
