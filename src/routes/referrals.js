@@ -29,17 +29,83 @@ router.get('/code', getUserId, async (req, res) => {
     const { userId } = req;
     console.log(`🔗 Getting referral code for user: ${userId}`);
 
-    // Use the SQL function to get or create referral code
-    const { data: code, error } = await supabase
-      .rpc('create_referral_code', { user_id: userId });
+    // First check if user already has a code
+    const { data: existingCode, error: fetchError } = await supabase
+      .from('referral_codes')
+      .select('code')
+      .eq('user_id', userId)
+      .single();
 
-    if (error) throw error;
+    if (existingCode) {
+      console.log(`✅ Found existing referral code: ${existingCode.code}`);
+      return res.json({
+        success: true,
+        code: existingCode.code
+      });
+    }
 
-    console.log(`✅ Referral code: ${code}`);
+    // Try SQL function first
+    try {
+      const { data: functionCode, error: functionError } = await supabase
+        .rpc('create_referral_code', { user_id: userId });
+
+      if (functionCode && !functionError) {
+        console.log(`✅ Created referral code via function: ${functionCode}`);
+        return res.json({
+          success: true,
+          code: functionCode
+        });
+      }
+    } catch (functionErr) {
+      console.warn('SQL function failed, creating manually:', functionErr);
+    }
+
+    // Fallback: Create code manually
+    console.log('🔄 Creating referral code manually...');
+    
+    // Generate a simple unique code
+    const generateCode = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let result = '';
+      for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    };
+
+    let newCode = generateCode();
+    let attempts = 0;
+    
+    // Ensure uniqueness
+    while (attempts < 5) {
+      const { data: existing } = await supabase
+        .from('referral_codes')
+        .select('code')
+        .eq('code', newCode)
+        .single();
+
+      if (!existing) {
+        break; // Code is unique
+      }
+      
+      newCode = generateCode();
+      attempts++;
+    }
+
+    // Insert the new code
+    const { data: insertedCode, error: insertError } = await supabase
+      .from('referral_codes')
+      .insert({ user_id: userId, code: newCode })
+      .select('code')
+      .single();
+
+    if (insertError) throw insertError;
+
+    console.log(`✅ Created referral code manually: ${newCode}`);
 
     res.json({
       success: true,
-      code: code
+      code: newCode
     });
 
   } catch (error) {
