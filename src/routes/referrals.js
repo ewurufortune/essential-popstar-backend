@@ -207,6 +207,44 @@ router.post('/claim', getUserId, async (req, res) => {
 });
 
 /**
+ * GET /api/referrals/check-usage/:userId
+ * Check if user has already used a referral code
+ */
+router.get('/check-usage/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log(`🔍 Checking referral usage for user: ${userId}`);
+
+    // Check if user has already used a referral code
+    const { data: existingClaim, error } = await supabase
+      .from('referral_claims')
+      .select('id, referral_code, created_at')
+      .eq('referred_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    const hasUsedReferral = !!existingClaim;
+    console.log(`✅ User referral usage check: ${hasUsedReferral ? 'Used' : 'Not used'}`);
+
+    res.json({
+      success: true,
+      hasUsedReferral,
+      referralInfo: existingClaim || null
+    });
+
+  } catch (error) {
+    console.error('Check referral usage error:', error);
+    res.status(500).json({
+      error: 'Failed to check referral usage',
+      details: error.message
+    });
+  }
+});
+
+/**
  * GET /api/referrals/stats
  * Get referral statistics for user
  */
