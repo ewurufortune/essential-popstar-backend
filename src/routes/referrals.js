@@ -9,13 +9,52 @@ const supabase = createClient(
 );
 
 /**
- * Middleware to get user ID from headers
+ * Middleware to get user ID from headers and handle ID migration
  */
-const getUserId = (req, res, next) => {
+const getUserId = async (req, res, next) => {
   const userId = req.headers['x-user-id'];
   if (!userId) {
     return res.status(400).json({ error: 'x-user-id header is required' });
   }
+
+  // Check if user exists in app_users table, try both with and without dots
+  const userIdWithDots = userId;
+  const userIdWithoutDots = userId.replace(/\./g, '');
+
+  try {
+    // First try with dots
+    const { data: userWithDots } = await supabase
+      .from('app_users')
+      .select('id')
+      .eq('id', userIdWithDots)
+      .single();
+
+    if (userWithDots) {
+      req.userId = userIdWithDots;
+      return next();
+    }
+  } catch (error) {
+    // Ignore error, try without dots
+  }
+
+  try {
+    // Try without dots
+    const { data: userWithoutDots } = await supabase
+      .from('app_users')
+      .select('id')
+      .eq('id', userIdWithoutDots)
+      .single();
+
+    if (userWithoutDots) {
+      console.log(`🔄 Using user ID without dots: ${userIdWithoutDots}`);
+      req.userId = userIdWithoutDots;
+      return next();
+    }
+  } catch (error) {
+    // Ignore error
+  }
+
+  // If neither exists, use the original ID (will be created if needed)
   req.userId = userId;
   next();
 };

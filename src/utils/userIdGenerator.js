@@ -27,12 +27,13 @@ function generateCustomUserId() {
 function isValidUserId(userId) {
   if (!userId || typeof userId !== 'string') return false;
   
-  // Check if it matches our custom format, Apple UUID format, or is a simple string
+  // Check if it matches our custom format, Apple UUID format, Apple ID format, or is a simple string
   const customFormat = /^EP_\d{8}_[A-Z0-9]{5}$/;
   const uuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const simpleFormat = /^[a-zA-Z0-9_-]{3,50}$/;
+  const appleIdFormat = /^[0-9a-f]{6}\.[0-9a-f]{32}\.[0-9a-f]{4}$/i; // Apple Sign In ID format
+  const simpleFormat = /^[a-zA-Z0-9._-]{3,50}$/;
   
-  return customFormat.test(userId) || uuidFormat.test(userId) || simpleFormat.test(userId);
+  return customFormat.test(userId) || uuidFormat.test(userId) || appleIdFormat.test(userId) || simpleFormat.test(userId);
 }
 
 /**
@@ -41,8 +42,8 @@ function isValidUserId(userId) {
 function sanitizeUserId(userId) {
   if (!userId) return null;
   
-  // Allow hyphens for UUIDs (Apple user IDs), alphanumeric, underscores, and hyphens
-  const sanitized = userId.replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 50);
+  // Allow dots for Apple IDs, hyphens for UUIDs, alphanumeric, and underscores
+  const sanitized = userId.replace(/[^a-zA-Z0-9._-]/g, '').substring(0, 50);
   
   return isValidUserId(sanitized) ? sanitized : null;
 }
