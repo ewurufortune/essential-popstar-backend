@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { generateAndStoreNPCTweets, PREDEFINED_ACCOUNTS, PLAYER_FOCUSED_ACCOUNT_TYPES } = require('../services/npcTweetsService');
-const { checkPowerForAI, deductPowerForAI } = require('../services/aiService');
+const aiService = require('../services/aiService');
 
 /**
  * Generate NPC tweets based on game context
@@ -26,7 +26,7 @@ router.post('/generate', async (req, res) => {
     }
 
     // Check if user has enough power for AI generation (1 power required)
-    const powerCheck = await checkPowerForAI(userId);
+    const powerCheck = await aiService.checkPowerForAI(userId);
     if (!powerCheck.hasEnoughPower) {
       return res.status(400).json({
         success: false,
@@ -37,7 +37,7 @@ router.post('/generate', async (req, res) => {
     }
 
     // Deduct power before generating tweets
-    await deductPowerForAI(userId, 1);
+    await aiService.deductPowerForAI(userId, 1);
 
     const result = await generateAndStoreNPCTweets(userId, context);
 
