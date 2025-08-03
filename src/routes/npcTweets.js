@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { generateAndStoreNPCTweets, PREDEFINED_ACCOUNTS, PLAYER_FOCUSED_ACCOUNT_TYPES } = require('../services/npcTweetsService');
+const { generateAndStoreNPCTweets, getPredefinedAccounts, PLAYER_FOCUSED_ACCOUNT_TYPES } = require('../services/npcTweetsService');
 const aiService = require('../services/aiService');
 
 /**
@@ -61,6 +61,7 @@ router.post('/generate', async (req, res) => {
  */
 router.get('/accounts', (req, res) => {
   try {
+    const PREDEFINED_ACCOUNTS = getPredefinedAccounts();
     const predefinedAccounts = PREDEFINED_ACCOUNTS.map(account => ({
       id: account.id,
       username: account.username,

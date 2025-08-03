@@ -10,27 +10,27 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Get random aesthetic images for NPC avatars
-const getRandomAvatarImage = () => {
+// Get random aesthetic images for NPC avatars from local assets
+const getRandomAvatarImage = (baseUrl = process.env.BACKEND_URL || 'https://essential-popstar-backend-production.up.railway.app') => {
   const avatarImages = [
-    '/assets/npc-avatars/espn-music.jpeg',
-    '/assets/npc-avatars/tmz-entertainment.jpg', 
-    '/assets/npc-avatars/formula1-beats.jpg',
-    '/assets/npc-avatars/popculture-insider.jpg',
-    '/assets/npc-avatars/music-metrics.jpg'
+    `${baseUrl}/assets/npc-avatars/avatar1.jpeg`,
+    `${baseUrl}/assets/npc-avatars/avatar2.jpg`,
+    `${baseUrl}/assets/npc-avatars/avatar3.jpg`,
+    `${baseUrl}/assets/npc-avatars/avatar4.jpg`,
+    `${baseUrl}/assets/npc-avatars/avatar5.jpg`
   ];
   return avatarImages[Math.floor(Math.random() * avatarImages.length)];
 };
 
 // Predefined NPC accounts (only 2) - they post about their own topics, not music
-const PREDEFINED_ACCOUNTS = [
+const getPredefinedAccounts = (baseUrl = process.env.BACKEND_URL || 'https://essential-popstar-backend-production.up.railway.app') => [
   {
     id: 'espn',
     username: '@ESPN',
     name: 'ESPN',
     topic: 'sports news and updates',
     personality: 'Professional sports broadcaster, reports on games, trades, and athletic achievements',
-    avatar: '/assets/npc-avatars/espn-music.jpeg',
+    avatar: `${baseUrl}/assets/npc-avatars/avatar1.jpeg`,
     aboutPlayer: false
   },
   {
@@ -39,7 +39,7 @@ const PREDEFINED_ACCOUNTS = [
     name: 'Formula 1',
     topic: 'racing news and F1 updates',
     personality: 'High-energy racing coverage, focuses on races, drivers, and racing culture',
-    avatar: '/assets/npc-avatars/formula1-beats.jpg',
+    avatar: `${baseUrl}/assets/npc-avatars/avatar2.jpg`,
     aboutPlayer: false
   }
 ];
@@ -87,6 +87,7 @@ const PLAYER_FOCUSED_ACCOUNT_TYPES = [
 async function generateNPCTweets(context, numberOfTweets = 8) {
   try {
     const tweets = [];
+    const PREDEFINED_ACCOUNTS = getPredefinedAccounts();
     
     // Generate 2 tweets from predefined accounts (ESPN, F1)
     for (const account of PREDEFINED_ACCOUNTS) {
@@ -141,7 +142,7 @@ async function generateTweetForPredefinedAccount(account) {
     const systemPrompt = `You are ${account.name} (${account.username}), focused on ${account.topic}. 
 Your personality: ${account.personality}
 
-Generate a tweet about ${account.topic}. This should be completely unrelated to music - focus only on your specific domain (sports for ESPN, racing for Formula 1). Keep it under 280 characters, engaging, and authentic to your brand. Use minimal emojis (1-2 max) and NO hashtags.
+Generate a tweet about ${account.topic}. This should be completely unrelated to music - focus only on your specific domain (sports for ESPN, racing for Formula 1). Keep it under 180 characters, engaging, and authentic to your brand. Use minimal emojis (1-2 max) and NO hashtags.
 
 Create a realistic ${account.topic} update that could actually be posted by this account today.`;
 
@@ -183,6 +184,8 @@ Personality: ${accountType.personality}
 Topics you focus on: ${accountType.topics.join(', ')}
 
 Artist's Current Career Status:
+- Artist Name: ${context.playerName || 'Unknown Artist'}
+- Artist Age: ${context.playerAge || 'Unknown'}
 - Date: ${context.date || 'Current week'}
 - Last Released Single: ${context.lastReleasedSingle || 'None'}
 - Last Released Album: ${context.lastReleasedAlbum || 'None'}
@@ -190,13 +193,13 @@ Artist's Current Career Status:
 - Charting Songs: ${context.chartingSongs || 'None currently charting'}
 - Next Project Hype: ${context.nextProjectHype || 'No upcoming projects announced'}
 
-Generate both a fictional account and tweet content. Use minimal emojis (1-2 max) and NO hashtags. Make it authentic to the ${accountType.type} personality.
-
+Generate both a fictional account and tweet content. Use minimal emojis (1-2 max) and NO hashtags. Make it remarkable and authentic to the ${accountType.type} personality.
+less than 180 characters.
 Response format should be a JSON object:
 {
   "username": "@ExampleAccount",
   "name": "Account Display Name", 
-  "content": "The tweet content about this artist",
+  "content": "The tweet content about this artist (be remarkable aand witty)",
   "accountType": "${accountType.type}"
 }`;
 
@@ -248,45 +251,7 @@ Response format should be a JSON object:
  * @param {Object} context - Game context data
  * @returns {string} Generated tweet content
  */
-async function generateTweetForAccount(account, context) {
-  try {
-    const systemPrompt = `You are ${account.name} (${account.username}), a social media account focused on ${account.topic}. 
-Your personality: ${account.personality}
 
-Generate a tweet about this artist's career progress and current situation. Keep it under 280 characters, engaging, and true to your account's voice. Use minimal emojis (1-2 max) and NO hashtags.
-
-Artist's Current Career Status:
-- Date: ${context.date || 'Current week'}
-- Last Released Single: ${context.lastReleasedSingle || 'None'}
-- Last Released Album: ${context.lastReleasedAlbum || 'None'}
-- Current Reach: ${context.reach || 'Unknown'}
-- Charting Songs: ${context.chartingSongs || 'None currently charting'}
-- Next Project Hype: ${context.nextProjectHype || 'No upcoming projects announced'}
-
-Create a tweet that comments on this specific artist's career trajectory, recent releases, or current chart performance. Make it feel like authentic industry commentary from your account's perspective.`;
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: 'Generate an engaging tweet based on the current context.'
-        }
-      ],
-      max_tokens: 100,
-      temperature: 0.8,
-    });
-
-    return completion.choices[0]?.message?.content?.trim();
-  } catch (error) {
-    console.error(`Error generating tweet for ${account.username}:`, error);
-    return null;
-  }
-}
 
 /**
  * Generate remarkable context-based tweets from made-up accounts
@@ -294,103 +259,13 @@ Create a tweet that comments on this specific artist's career trajectory, recent
  * @param {number} numberOfTweets - Number of remarkable tweets to generate
  * @returns {Array} Generated remarkable tweets
  */
-async function generateRemarkableTweets(context, numberOfTweets = 3) {
-  try {
-    const tweets = [];
-    
-    for (let i = 0; i < numberOfTweets; i++) {
-      try {
-        const tweet = await generateRemarkableTweet(context);
-        if (tweet) {
-          tweets.push(tweet);
-        }
-      } catch (error) {
-        console.error('Error generating remarkable tweet:', error);
-        // Continue with other tweets even if one fails
-      }
-    }
-    
-    return tweets;
-  } catch (error) {
-    console.error('Error generating remarkable tweets:', error);
-    throw error;
-  }
-}
 
 /**
  * Generate a single remarkable tweet with dynamic account
  * @param {Object} context - Game context data
  * @returns {Object} Generated remarkable tweet
  */
-async function generateRemarkableTweet(context) {
-  try {
-    const systemPrompt = `Create a remarkable tweet about this specific artist's career situation from a fictional but believable social media account.
 
-You should:
-1. Create a fictional but believable social media account name and username
-2. Generate content that could realistically go viral or be highly engaging
-3. Reference this specific artist's career status in a creative, surprising, or humorous way
-4. Keep it under 280 characters
-5. Use minimal emojis (1-2 max) and NO hashtags
-6. Make it feel authentic to current social media trends
-
-Artist's Current Career Status:
-- Date: ${context.date || 'Current week'}
-- Last Released Single: ${context.lastReleasedSingle || 'None'}
-- Last Released Album: ${context.lastReleasedAlbum || 'None'}
-- Current Reach: ${context.reach || 'Unknown'}
-- Charting Songs: ${context.chartingSongs || 'None currently charting'}
-- Next Project Hype: ${context.nextProjectHype || 'No upcoming projects announced'}
-
-Response format should be a JSON object with:
-{
-  "username": "@ExampleAccount",
-  "name": "Example Account Name",
-  "content": "The tweet content here about this artist",
-  "accountType": "brief description of account type"
-}`;
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: 'Generate a remarkable tweet with account details.'
-        }
-      ],
-      max_tokens: 150,
-      temperature: 0.9,
-    });
-
-    const response = completion.choices[0]?.message?.content?.trim();
-    
-    try {
-      const tweetData = JSON.parse(response);
-      
-      return {
-        id: `remarkable_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        username: tweetData.username,
-        name: tweetData.name,
-        avatar: getRandomAvatarImage(),
-        content: tweetData.content,
-        timestamp: new Date().toISOString(),
-        isNPC: true,
-        accountType: 'remarkable',
-        topic: tweetData.accountType
-      };
-    } catch (parseError) {
-      console.error('Error parsing remarkable tweet JSON:', parseError);
-      return null;
-    }
-  } catch (error) {
-    console.error('Error generating remarkable tweet:', error);
-    return null;
-  }
-}
 
 // Removed getRandomAccounts function - no longer needed with new implementation
 
@@ -427,6 +302,6 @@ async function generateAndStoreNPCTweets(userId, context) {
 module.exports = {
   generateNPCTweets,
   generateAndStoreNPCTweets,
-  PREDEFINED_ACCOUNTS,
+  getPredefinedAccounts,
   PLAYER_FOCUSED_ACCOUNT_TYPES
 };

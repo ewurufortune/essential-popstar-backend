@@ -23,12 +23,14 @@ class AIService {
       const systemPrompt = `You are an AI assistant helping to generate social media content for a pop star in the music industry simulation game "Essential Popstar".
 
 Context about the player's current game state:
-- Current Date: ${context.date?.value || 'Unknown'}
-- Last Released Single: ${context.lastReleasedSingle?.value || 'None'}
-- Last Released Album: ${context.lastReleasedAlbum?.value || 'None'}
-- Audience Reach: ${context.reach?.value || 0} (${context.reach?.description || ''})
-- Charting Songs: ${context.chartingSongs?.value || 'None'}
-- Next Project Hype: ${context.nextProjectHype?.value || 'None'}
+- Player Name: ${context.playerName || 'Unknown'}
+- Player Age: ${context.playerAge || 'Unknown'}
+- Current Date: ${context.date || 'Unknown'}
+- Last Released Single: ${context.lastReleasedSingle || 'None'}
+- Last Released Album: ${context.lastReleasedAlbum || 'None'}
+- Audience Reach: ${context.reach || 'Unknown'}
+- Charting Songs: ${context.chartingSongs || 'None'}
+- Next Project Hype: ${context.nextProjectHype || 'None'}
 
 Generate a realistic social media post that:
 1. Fits the pop star's current career stage and momentum
