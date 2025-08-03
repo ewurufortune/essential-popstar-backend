@@ -69,6 +69,7 @@ CREATE TABLE referral_rewards (
   ledger_entry_id BIGINT REFERENCES power_ledger(id) -- link to actual reward
 );
 
+
 -- Insert default configuration
 INSERT INTO power_config (max_power, refill_amount, refill_interval_minutes) 
 VALUES (24, 1, 30)

@@ -9,6 +9,7 @@ const webhookRoutes = require('./routes/webhooks');
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 const referralRoutes = require('./routes/referrals');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +50,7 @@ app.use('/api', powerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/referrals', referralRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -69,6 +71,11 @@ app.get('/', (req, res) => {
         code: 'GET /api/referrals/code',
         claim: 'POST /api/referrals/claim',
         stats: 'GET /api/referrals/stats'
+      },
+      ai: {
+        generateTweet: 'POST /api/ai/generate-tweet',
+        power: 'GET /api/ai/power/:userId',
+        health: 'GET /api/ai/health'
       },
       webhooks: {
         revenuecat: 'POST /webhooks/revenuecat',
