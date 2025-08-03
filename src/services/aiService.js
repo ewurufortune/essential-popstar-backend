@@ -60,7 +60,7 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
     }
   }
 
-  async checkPowerForAI(userId) {
+  async checkPowerForAI(userId, requiredPower = 1) {
     try {
       // Get current power configuration
       const { data: config } = await supabase
@@ -75,6 +75,7 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
         .eq('user_id', userId)
         .single();
 
+      let currentPower;
       if (!balance) {
         // User doesn't exist, create with 0 power
         const { data: newBalance, error: insertError } = await supabase
@@ -88,10 +89,16 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
           .single();
 
         if (insertError) throw insertError;
-        return this.calculateCurrentPower(newBalance, config);
+        currentPower = this.calculateCurrentPower(newBalance, config);
+      } else {
+        currentPower = this.calculateCurrentPower(balance, config);
       }
 
-      return this.calculateCurrentPower(balance, config);
+      return {
+        currentPower,
+        requiredPower,
+        hasEnoughPower: currentPower >= requiredPower
+      };
     } catch (error) {
       console.error('Error checking power for AI:', error);
       throw error;
