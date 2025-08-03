@@ -99,17 +99,21 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
   }
 
   calculateCurrentPower(balance, config) {
+    if (!config || !balance) {
+      return 0;
+    }
+
     const now = new Date();
     const lastUpdate = new Date(balance.last_update);
     const timeDiffMs = now.getTime() - lastUpdate.getTime();
-    const intervalMs = config.refill_interval_minutes * 60 * 1000;
+    const intervalMs = (config.refill_interval_minutes || 30) * 60 * 1000;
     
     const refillCycles = Math.floor(timeDiffMs / intervalMs);
-    const refillAmount = refillCycles * config.refill_amount;
+    const refillAmount = refillCycles * (config.refill_amount || 1);
     
     const currentPower = Math.min(
-      balance.base_power + refillAmount,
-      config.max_power
+      (balance.base_power || 0) + refillAmount,
+      config.max_power || 24
     );
     
     return currentPower;
