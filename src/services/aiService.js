@@ -91,7 +91,7 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
         return this.calculateCurrentPower(newBalance, config);
       }
 
-      return calculateCurrentPower(balance, config);
+      return this.calculateCurrentPower(balance, config);
     } catch (error) {
       console.error('Error checking power for AI:', error);
       throw error;
