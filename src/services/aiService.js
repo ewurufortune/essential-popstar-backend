@@ -131,11 +131,21 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
 
       if (ledgerError) throw ledgerError;
 
-      // Update power balance
+      // Update power balance by first getting current power, then updating
+      const { data: currentBalance, error: getCurrentError } = await supabase
+        .from('power_balances')
+        .select('base_power')
+        .eq('user_id', userId)
+        .single();
+
+      if (getCurrentError) throw getCurrentError;
+
+      const newPower = currentBalance.base_power - powerCost;
+      
       const { data: updatedBalance, error: balanceError } = await supabase
         .from('power_balances')
         .update({
-          base_power: supabase.sql`base_power - ${powerCost}`,
+          base_power: newPower,
           last_update: new Date().toISOString()
         })
         .eq('user_id', userId)

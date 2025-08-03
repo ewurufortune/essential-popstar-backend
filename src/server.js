@@ -10,6 +10,7 @@ const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 const referralRoutes = require('./routes/referrals');
 const aiRoutes = require('./routes/ai');
+const npcTweetsRoutes = require('./routes/npcTweets');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +52,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/npc-tweets', npcTweetsRoutes);
+
+// Serve static files for NPC avatars
+app.use('/assets', express.static('assets'));
 
 // Root endpoint
 app.get('/', (req, res) => {
