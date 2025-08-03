@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { generateAndStoreNPCTweets, NPC_ACCOUNTS } = require('../services/npcTweetsService');
+const { generateAndStoreNPCTweets, PREDEFINED_ACCOUNTS, PLAYER_FOCUSED_ACCOUNT_TYPES } = require('../services/npcTweetsService');
+const { checkPowerForAI, deductPowerForAI } = require('../services/aiService');
 
 /**
  * Generate NPC tweets based on game context
@@ -24,9 +25,27 @@ router.post('/generate', async (req, res) => {
       });
     }
 
+    // Check if user has enough power for AI generation (1 power required)
+    const powerCheck = await checkPowerForAI(userId);
+    if (!powerCheck.hasEnoughPower) {
+      return res.status(400).json({
+        success: false,
+        error: 'Insufficient power for AI generation',
+        currentPower: powerCheck.currentPower,
+        requiredPower: powerCheck.requiredPower
+      });
+    }
+
+    // Deduct power before generating tweets
+    await deductPowerForAI(userId, 1);
+
     const result = await generateAndStoreNPCTweets(userId, context);
 
-    res.json(result);
+    res.json({
+      ...result,
+      powerDeducted: 1,
+      remainingPower: powerCheck.currentPower - 1
+    });
   } catch (error) {
     console.error('Error generating NPC tweets:', error);
     res.status(500).json({
@@ -42,17 +61,26 @@ router.post('/generate', async (req, res) => {
  */
 router.get('/accounts', (req, res) => {
   try {
-    const accounts = NPC_ACCOUNTS.map(account => ({
+    const predefinedAccounts = PREDEFINED_ACCOUNTS.map(account => ({
       id: account.id,
       username: account.username,
       name: account.name,
       topic: account.topic,
-      avatar: account.avatar
+      avatar: account.avatar,
+      type: 'predefined'
+    }));
+
+    const playerFocusedTypes = PLAYER_FOCUSED_ACCOUNT_TYPES.map(accountType => ({
+      type: accountType.type,
+      personality: accountType.personality,
+      topics: accountType.topics,
+      category: 'player-focused'
     }));
 
     res.json({
       success: true,
-      accounts: accounts
+      predefinedAccounts: predefinedAccounts,
+      playerFocusedTypes: playerFocusedTypes
     });
   } catch (error) {
     console.error('Error fetching NPC accounts:', error);
