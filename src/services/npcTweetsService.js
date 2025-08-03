@@ -392,15 +392,7 @@ Response format should be a JSON object with:
   }
 }
 
-/**
- * Get random selection of NPC accounts
- * @param {number} count - Number of accounts to select
- * @returns {Array} Random selection of accounts
- */
-function getRandomAccounts(count) {
-  const shuffled = [...NPC_ACCOUNTS].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, Math.min(count, NPC_ACCOUNTS.length));
-}
+// Removed getRandomAccounts function - no longer needed with new implementation
 
 /**
  * Generate and store NPC tweets for a user
