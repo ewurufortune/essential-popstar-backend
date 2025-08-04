@@ -111,7 +111,41 @@ async function generateNPCTweets(context, numberOfTweets = 8) {
       }
     }
     
-    // Generate 6 tweets from player-focused accounts
+    // Check if player follows any NPCs and generate tweets from followed accounts
+    const hasFollows = context.followedNPCs && context.followedNPCs !== 'None';
+    let followedTweetsCount = 0;
+    
+    if (hasFollows && tweets.length < numberOfTweets) {
+      // Extract number of followed NPCs from context (e.g., "Following 3 NPCs" -> 3)
+      const followCountMatch = context.followedNPCs.match(/Following (\d+) NPCs/);
+      const followedCount = followCountMatch ? parseInt(followCountMatch[1]) : 0;
+      
+      // Calculate probability based on followed count to manage AI costs
+      let probability = 1.0; // 100% chance by default
+      if (followedCount > 5) {
+        // Scale down probability: 6 follows = 80%, 7 = 70%, 8 = 60%, etc.
+        probability = Math.max(0.3, 1.1 - (followedCount * 0.1));
+      }
+      
+      // Generate tweets from followed accounts with scaled probability
+      followedTweetsCount = Math.min(Math.ceil(followedCount * probability), numberOfTweets - tweets.length, 4); // Cap at 4 max
+      
+      for (let i = 0; i < followedTweetsCount; i++) {
+        // Each individual tweet still has the probability check
+        if (Math.random() <= probability) {
+          try {
+            const followedTweet = await generateFollowedAccountTweet(context);
+            if (followedTweet) {
+              tweets.push(followedTweet);
+            }
+          } catch (error) {
+            console.error('Error generating followed account tweet:', error);
+          }
+        }
+      }
+    }
+    
+    // Generate remaining tweets from player-focused accounts
     const remainingTweets = numberOfTweets - tweets.length;
     for (let i = 0; i < remainingTweets; i++) {
       try {
@@ -142,7 +176,7 @@ async function generateTweetForPredefinedAccount(account) {
     const systemPrompt = `You are ${account.name} (${account.username}), focused on ${account.topic}. 
 Your personality: ${account.personality}
 
-Generate a tweet about ${account.topic}. This should be completely unrelated to music - focus only on your specific domain (sports for ESPN, racing for Formula 1). Keep it under 180 characters, engaging, and authentic to your brand. Use minimal emojis (1-2 max) and NO hashtags.
+Generate a tweet about ${account.topic}. This should be completely unrelated to music - focus only on your specific domain (sports for ESPN, racing for Formula 1). Keep it under 100 characters, engaging, and authentic to your brand. Use minimal emojis (1-2 max) and NO hashtags.
 
 Create a realistic ${account.topic} update that could actually be posted by this account today.`;
 
@@ -170,6 +204,99 @@ Create a realistic ${account.topic} update that could actually be posted by this
 }
 
 /**
+ * Generate a tweet from a followed NPC account
+ * @param {Object} context - Game context data
+ * @returns {Object} Generated tweet with account details
+ */
+async function generateFollowedAccountTweet(context) {
+  try {
+    // Generate a tweet that directly mentions or interacts with the player
+    const followedAccountTypes = [
+      {
+        type: 'industry_friend',
+        personality: 'Friendly industry contact who supports the artist and occasionally interacts publicly',
+        topics: ['supportive messages', 'collaboration hints', 'behind-the-scenes friendship']
+      },
+      {
+        type: 'mentor_figure',
+        personality: 'Established artist or industry veteran who gives advice and shows public support',
+        topics: ['career advice', 'industry wisdom', 'public endorsement']
+      },
+      {
+        type: 'collaborator',
+        personality: 'Another artist or producer who has worked with or wants to work with the player',
+        topics: ['collaboration announcements', 'studio sessions', 'creative process']
+      }
+    ];
+
+    const accountType = followedAccountTypes[Math.floor(Math.random() * followedAccountTypes.length)];
+    
+    const systemPrompt = `Create a tweet from a ${accountType.type} who follows and knows this artist personally.
+
+Account Type: ${accountType.type}
+Personality: ${accountType.personality}
+Topics: ${accountType.topics.join(', ')}
+
+Artist Information:
+- Artist Name: ${context.playerName || 'Unknown Artist'}
+- Artist Age: ${context.playerAge || 'Unknown'}
+- Last Released Single: ${context.lastReleasedSingle || 'None'}
+- Current Reach: ${context.reach || 'Unknown'}
+
+Generate a tweet that directly mentions or references the artist by name, showing a personal connection. This should feel like it comes from someone who actually knows the artist. Use minimal emojis (1-2 max) and NO hashtags.
+less than 100 characters.
+
+Response format should be a JSON object:
+{
+  "username": "@ExampleAccount",
+  "name": "Account Display Name",
+  "content": "The tweet content that mentions ${context.playerName || 'the artist'} directly",
+  "accountType": "${accountType.type}"
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: `Generate a ${accountType.type} tweet that mentions ${context.playerName || 'the artist'}.`
+        }
+      ],
+      max_tokens: 150,
+      temperature: 0.9,
+    });
+
+    const response = completion.choices[0]?.message?.content?.trim();
+    
+    try {
+      const tweetData = JSON.parse(response);
+      
+      return {
+        id: `followed_${accountType.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        username: tweetData.username,
+        name: tweetData.name,
+        avatar: getRandomAvatarImage(),
+        content: tweetData.content,
+        timestamp: new Date().toISOString(),
+        isNPC: true,
+        accountType: `followed_${accountType.type}`,
+        topic: `followed-account-${accountType.type}`
+      };
+    } catch (parseError) {
+      console.error('Error parsing followed account tweet JSON:', parseError);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error generating followed account tweet:', error);
+    return null;
+  }
+}
+
+/**
  * Generate a player-focused tweet from a dynamically created account
  * @param {Object} accountType - Player-focused account type configuration
  * @param {Object} context - Game context data
@@ -192,9 +319,10 @@ Artist's Current Career Status:
 - Current Reach: ${context.reach || 'Unknown'}
 - Charting Songs: ${context.chartingSongs || 'None currently charting'}
 - Next Project Hype: ${context.nextProjectHype || 'No upcoming projects announced'}
+- Followed NPCs: ${context.followedNPCs || 'None'}
 
 Generate both a fictional account and tweet content. Use minimal emojis (1-2 max) and NO hashtags. Make it remarkable and authentic to the ${accountType.type} personality.
-less than 180 characters.
+less than 100 characters.
 Response format should be a JSON object:
 {
   "username": "@ExampleAccount",
@@ -277,7 +405,7 @@ Response format should be a JSON object:
  */
 async function generateAndStoreNPCTweets(userId, context) {
   try {
-    // Generate 8 tweets total: 2 predefined (ESPN, F1) + 6 player-focused
+    // Generate 8 tweets total: 2 predefined (ESPN, F1) + followed NPC tweets (scaled by count) + remaining player-focused
     const allTweets = await generateNPCTweets(context, 8);
     
     // Store tweets in database (if needed for persistence)

@@ -180,6 +180,73 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
     }
   }
 
+  async generateCommentsForTweet(tweet, context, numberOfComments = 8) {
+    if (!this.openai) {
+      throw new Error('OpenAI not configured. AI features are disabled.');
+    }
+
+    try {
+      const systemPrompt = `You are generating realistic social media comments for this tweet in the music industry simulation game "Essential Popstar".
+
+Tweet Details:
+- Author: ${tweet.author || 'Unknown'}
+- Username: ${tweet.username || '@unknown'}
+- Content: "${tweet.content}"
+
+Game Context:
+- Player Name: ${context?.playerName || 'Unknown Artist'}
+- Player Age: ${context?.playerAge || 'Unknown'}
+- Current Reach: ${context?.reach || 'Unknown'}
+
+Generate ${numberOfComments} diverse, realistic comments that people might leave on this tweet. Comments should:
+1. Vary in tone (supportive, critical, neutral, excited, etc.)
+2. Reference the tweet content appropriately
+3. Feel authentic to real social media interactions
+4. Be under 100 characters each
+5. Include varied usernames and display names
+6. Some should mention the player if relevant
+
+Response format should be a JSON array:
+[
+  {
+    "username": "@username1",
+    "name": "Display Name",
+    "content": "Comment text here"
+  },
+  ...
+]`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: `Generate ${numberOfComments} realistic comments for this tweet.`
+          }
+        ],
+        max_tokens: 800,
+        temperature: 0.9,
+      });
+
+      const response = completion.choices[0]?.message?.content?.trim();
+      
+      try {
+        const comments = JSON.parse(response);
+        return Array.isArray(comments) ? comments : [];
+      } catch (parseError) {
+        console.error('Error parsing comments JSON:', parseError);
+        return [];
+      }
+    } catch (error) {
+      console.error('OpenAI API error for comments:', error);
+      throw new Error('Failed to generate AI comments');
+    }
+  }
+
   isAvailable() {
     return this.openai !== null;
   }

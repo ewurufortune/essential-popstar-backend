@@ -92,6 +92,46 @@ router.get('/power/:userId', async (req, res) => {
   }
 });
 
+// Generate AI comments for a tweet
+router.post('/generate-comments', async (req, res) => {
+  try {
+    const { userId, tweet, context } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    if (!tweet || !tweet.content) {
+      return res.status(400).json({ error: 'Tweet content is required' });
+    }
+
+    // Check if AI service is available
+    if (!aiService.isAvailable()) {
+      return res.status(503).json({ 
+        error: 'AI service is currently unavailable',
+        fallback: true 
+      });
+    }
+
+    // Generate 8 comments for the tweet
+    const comments = await aiService.generateCommentsForTweet(tweet, context);
+
+    res.json({
+      success: true,
+      comments: comments,
+      count: comments.length
+    });
+
+  } catch (error) {
+    console.error('Error generating AI comments:', error);
+    
+    res.status(500).json({ 
+      error: 'Failed to generate AI comments',
+      fallback: true 
+    });
+  }
+});
+
 // Health check for AI service
 router.get('/health', (req, res) => {
   res.json({

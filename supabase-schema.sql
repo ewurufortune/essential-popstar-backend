@@ -5,7 +5,11 @@
 CREATE TABLE app_users (
   id TEXT PRIMARY KEY, -- Apple user ID or custom user ID
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_active TIMESTAMPTZ DEFAULT now()
+  last_active TIMESTAMPTZ DEFAULT now(),
+  experience INT NOT NULL DEFAULT 0, -- Player experience points
+  level INT NOT NULL DEFAULT 1, -- Player level
+  max_follows INT NOT NULL DEFAULT 1, -- Maximum NPCs player can follow (starts at 1, +1 every 5 levels)
+  followed_npc_ids TEXT[] DEFAULT '{}' -- Array of followed NPC IDs to prevent cheating
 );
 
 -- Configuration you can change without an app release
@@ -85,6 +89,9 @@ CREATE INDEX idx_referral_claims_referrer ON referral_claims(referrer_id);
 CREATE INDEX idx_referral_claims_referred ON referral_claims(referred_id);
 CREATE INDEX idx_referral_claims_ip ON referral_claims(ip_address);
 CREATE INDEX idx_referral_rewards_referrer ON referral_rewards(referrer_id);
+CREATE INDEX idx_app_users_level ON app_users(level);
+CREATE INDEX idx_app_users_experience ON app_users(experience);
+CREATE INDEX idx_app_users_followed_npc_ids ON app_users USING GIN(followed_npc_ids);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
@@ -150,7 +157,80 @@ CREATE POLICY "Users can read referral rewards" ON referral_rewards
 CREATE POLICY "System can create referral rewards" ON referral_rewards
   FOR INSERT WITH CHECK (true); -- Allow API to issue rewards
 
--- Helper functions for referral system
+-- Helper functions for referral system and experience system
+
+-- Function to calculate level from experience
+CREATE OR REPLACE FUNCTION calculate_level_from_experience(exp INT)
+RETURNS INT AS $$
+BEGIN
+  -- Level formula: level = floor(sqrt(experience / 100)) + 1
+  -- Level 1: 0-99 exp, Level 2: 100-399 exp, Level 3: 400-899 exp, etc.
+  RETURN GREATEST(1, FLOOR(SQRT(exp / 100.0)) + 1);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get experience required for next level
+CREATE OR REPLACE FUNCTION experience_for_level(target_level INT)
+RETURNS INT AS $$
+BEGIN
+  -- Experience required for level N = (N-1)^2 * 100
+  RETURN GREATEST(0, (target_level - 1) * (target_level - 1) * 100);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to calculate max follows based on level
+CREATE OR REPLACE FUNCTION calculate_max_follows(player_level INT)
+RETURNS INT AS $$
+BEGIN
+  -- Start at 1, +1 every 5 levels: Level 1-4 = 1 follow, Level 5-9 = 2 follows, etc.
+  RETURN 1 + FLOOR((player_level - 1) / 5.0);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to add experience and level up
+CREATE OR REPLACE FUNCTION add_experience(user_id TEXT, exp_gained INT)
+RETURNS JSONB AS $$
+DECLARE
+  current_exp INT;
+  current_level INT;
+  new_exp INT;
+  new_level INT;
+  leveled_up BOOLEAN := FALSE;
+BEGIN
+  -- Get current experience and level
+  SELECT experience, level INTO current_exp, current_level
+  FROM app_users WHERE id = user_id;
+  
+  IF current_exp IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'User not found');
+  END IF;
+  
+  -- Calculate new experience and level
+  new_exp := current_exp + exp_gained;
+  new_level := calculate_level_from_experience(new_exp);
+  
+  -- Check if leveled up
+  IF new_level > current_level THEN
+    leveled_up := TRUE;
+  END IF;
+  
+  -- Update user record with new experience, level, and max_follows
+  UPDATE app_users 
+  SET experience = new_exp, level = new_level, max_follows = calculate_max_follows(new_level)
+  WHERE id = user_id;
+  
+  RETURN jsonb_build_object(
+    'success', true,
+    'previous_exp', current_exp,
+    'new_exp', new_exp,
+    'exp_gained', exp_gained,
+    'previous_level', current_level,
+    'new_level', new_level,
+    'leveled_up', leveled_up,
+    'next_level_exp', experience_for_level(new_level + 1)
+  );
+END;
+$$ LANGUAGE plpgsql;
 
 -- Function to generate unique referral code
 CREATE OR REPLACE FUNCTION generate_referral_code(user_id TEXT)
