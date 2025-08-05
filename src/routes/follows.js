@@ -1,18 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const database = require('../services/database');
+const { authenticate } = require('../middleware/auth');
 
 // Follow an NPC
-router.post('/follow', async (req, res) => {
+router.post('/follow', authenticate, async (req, res) => {
   try {
-    const { userId, npcId } = req.body;
+    const { npcId } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
-    if (!userId || !npcId) {
-      return res.status(400).json({ error: 'User ID and NPC ID are required' });
+    if (!npcId) {
+      return res.status(400).json({ error: 'NPC ID is required' });
     }
 
-    // Ensure user exists and get their data
-    const user = await database.getOrCreateUser(userId);
+    // User data already available from authentication middleware
+    const user = req.user;
 
     const currentFollows = user.followed_npc_ids || [];
 
@@ -58,16 +60,17 @@ router.post('/follow', async (req, res) => {
 });
 
 // Unfollow an NPC
-router.post('/unfollow', async (req, res) => {
+router.post('/unfollow', authenticate, async (req, res) => {
   try {
-    const { userId, npcId } = req.body;
+    const { npcId } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
-    if (!userId || !npcId) {
-      return res.status(400).json({ error: 'User ID and NPC ID are required' });
+    if (!npcId) {
+      return res.status(400).json({ error: 'NPC ID is required' });
     }
 
-    // Ensure user exists and get their data
-    const user = await database.getOrCreateUser(userId);
+    // User data already available from authentication middleware
+    const user = req.user;
 
     const currentFollows = user.followed_npc_ids || [];
 

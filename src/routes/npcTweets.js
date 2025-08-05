@@ -2,21 +2,16 @@ const express = require('express');
 const router = express.Router();
 const { generateAndStoreNPCTweets, getPredefinedAccounts, PLAYER_FOCUSED_ACCOUNT_TYPES } = require('../services/npcTweetsService');
 const aiService = require('../services/aiService');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * Generate NPC tweets based on game context
  * POST /api/npc-tweets/generate
  */
-router.post('/generate', async (req, res) => {
+router.post('/generate', authenticate, async (req, res) => {
   try {
-    const { userId, context } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        error: 'User ID is required'
-      });
-    }
+    const { context } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
     if (!context) {
       return res.status(400).json({

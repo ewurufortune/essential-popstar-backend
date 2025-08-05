@@ -1,15 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const aiService = require('../services/aiService');
+const { authenticate } = require('../middleware/auth');
 
 // Generate AI tweet
-router.post('/generate-tweet', async (req, res) => {
+router.post('/generate-tweet', authenticate, async (req, res) => {
   try {
-    const { userId, context, userInput } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    const { context, userInput } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
     if (!context) {
       return res.status(400).json({ error: 'Game context is required' });
@@ -70,13 +68,9 @@ router.post('/generate-tweet', async (req, res) => {
 });
 
 // Get user power status for AI
-router.get('/power/:userId', async (req, res) => {
+router.get('/power', authenticate, async (req, res) => {
   try {
-    const { userId } = req.params;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    const userId = req.user.id; // Get from authenticated user
 
     const currentPower = await aiService.checkPowerForAI(userId);
 
@@ -93,13 +87,10 @@ router.get('/power/:userId', async (req, res) => {
 });
 
 // Generate AI comments for a tweet
-router.post('/generate-comments', async (req, res) => {
+router.post('/generate-comments', authenticate, async (req, res) => {
   try {
-    const { userId, tweet, context } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    const { tweet, context } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
     if (!tweet || !tweet.content) {
       return res.status(400).json({ error: 'Tweet content is required' });
@@ -147,13 +138,10 @@ router.post('/generate-comments', async (req, res) => {
 });
 
 // Generate AI event narrative
-router.post('/generate-event-narrative', async (req, res) => {
+router.post('/generate-event-narrative', authenticate, async (req, res) => {
   try {
-    const { userId, event, attendeeNPCs, player, context } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    const { event, attendeeNPCs, player, context } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
     if (!event || !attendeeNPCs || !player) {
       return res.status(400).json({ error: 'Event details, attendee NPCs, and player info are required' });
@@ -199,13 +187,10 @@ router.post('/generate-event-narrative', async (req, res) => {
 });
 
 // Generate AI response options
-router.post('/generate-response-options', async (req, res) => {
+router.post('/generate-response-options', authenticate, async (req, res) => {
   try {
-    const { userId, event, attendeeNPCs, player, narrative, turnNumber, conversationHistory } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    const { event, attendeeNPCs, player, narrative, turnNumber, conversationHistory } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
     if (!event || !attendeeNPCs || !player || !narrative) {
       return res.status(400).json({ error: 'Event details, attendee NPCs, player info, and narrative are required' });
@@ -237,13 +222,10 @@ router.post('/generate-response-options', async (req, res) => {
 });
 
 // Generate AI response to player action
-router.post('/generate-ai-response', async (req, res) => {
+router.post('/generate-ai-response', authenticate, async (req, res) => {
   try {
-    const { userId, event, attendeeNPCs, player, playerResponse, turnNumber, conversationHistory } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    const { event, attendeeNPCs, player, playerResponse, turnNumber, conversationHistory } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
     if (!event || !attendeeNPCs || !player || !playerResponse) {
       return res.status(400).json({ error: 'Event details, attendee NPCs, player info, and player response are required' });
@@ -290,13 +272,10 @@ router.post('/generate-ai-response', async (req, res) => {
 });
 
 // Analyze conversation for relationship impact
-router.post('/analyze-conversation', async (req, res) => {
+router.post('/analyze-conversation', authenticate, async (req, res) => {
   try {
-    const { userId, conversationHistory, event, attendeeNPCs, player } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    const { conversationHistory, event, attendeeNPCs, player } = req.body;
+    const userId = req.user.id; // Get from authenticated user
 
     if (!conversationHistory || !event || !attendeeNPCs || !player) {
       return res.status(400).json({ error: 'Conversation history, event details, attendee NPCs, and player info are required' });
