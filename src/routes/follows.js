@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../services/database');
+const database = require('../services/database');
 
 // Follow an NPC
 router.post('/follow', async (req, res) => {
@@ -11,21 +11,8 @@ router.post('/follow', async (req, res) => {
       return res.status(400).json({ error: 'User ID and NPC ID are required' });
     }
 
-    // Get user's current data
-    const { data: user, error: userError } = await supabase
-      .from('app_users')
-      .select('level, max_follows, followed_npc_ids')
-      .eq('id', userId)
-      .single();
-
-    if (userError) {
-      console.error('Error fetching user:', userError);
-      return res.status(500).json({ error: 'Failed to fetch user data' });
-    }
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    // Ensure user exists and get their data
+    const user = await database.getOrCreateUser(userId);
 
     const currentFollows = user.followed_npc_ids || [];
 
@@ -46,7 +33,7 @@ router.post('/follow', async (req, res) => {
     // Add NPC to followed list
     const updatedFollows = [...currentFollows, npcId];
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await database.supabase
       .from('app_users')
       .update({ followed_npc_ids: updatedFollows })
       .eq('id', userId);
@@ -79,21 +66,8 @@ router.post('/unfollow', async (req, res) => {
       return res.status(400).json({ error: 'User ID and NPC ID are required' });
     }
 
-    // Get user's current follows
-    const { data: user, error: userError } = await supabase
-      .from('app_users')
-      .select('followed_npc_ids, max_follows')
-      .eq('id', userId)
-      .single();
-
-    if (userError) {
-      console.error('Error fetching user:', userError);
-      return res.status(500).json({ error: 'Failed to fetch user data' });
-    }
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    // Ensure user exists and get their data
+    const user = await database.getOrCreateUser(userId);
 
     const currentFollows = user.followed_npc_ids || [];
 
@@ -105,7 +79,7 @@ router.post('/unfollow', async (req, res) => {
     // Remove NPC from followed list
     const updatedFollows = currentFollows.filter(id => id !== npcId);
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await database.supabase
       .from('app_users')
       .update({ followed_npc_ids: updatedFollows })
       .eq('id', userId);
@@ -138,20 +112,8 @@ router.get('/status/:userId', async (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const { data: user, error: userError } = await supabase
-      .from('app_users')
-      .select('level, max_follows, followed_npc_ids')
-      .eq('id', userId)
-      .single();
-
-    if (userError) {
-      console.error('Error fetching user:', userError);
-      return res.status(500).json({ error: 'Failed to fetch user data' });
-    }
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    // Ensure user exists and get their data
+    const user = await database.getOrCreateUser(userId);
 
     const followedNpcs = user.followed_npc_ids || [];
 
