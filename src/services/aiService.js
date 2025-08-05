@@ -136,7 +136,7 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
         .insert({
           user_id: userId,
           delta: -powerCost,
-          reason: 'spend:ai_tweet_generation',
+          reason: 'spend:ai_generation',
           idempotency_key: `ai_${userId}_${Date.now()}`
         })
         .select()
@@ -245,6 +245,349 @@ Response format should be a JSON array:
       console.error('OpenAI API error for comments:', error);
       throw new Error('Failed to generate AI comments');
     }
+  }
+
+  async generateEventNarrative(event, attendeeNPCs, player, context) {
+    if (!this.openai) {
+      throw new Error('OpenAI not configured. AI features are disabled.');
+    }
+
+    try {
+      const primaryNPC = attendeeNPCs[0];
+      const otherNPCs = attendeeNPCs.slice(1);
+
+      const systemPrompt = `You are creating an immersive narrative opening for an AI roleplay event in the music industry simulation game "Essential Popstar".
+
+EVENT DETAILS:
+- Title: "${event.title}"
+- Description: "${event.description}"
+- Location Context: ${this.getLocationFromDescription(event.description)}
+
+PLAYER CHARACTER:
+- Name: ${player.name}
+- Age: ${player.age}
+- Genre: ${player.genre}
+- Current Status: ${player.role}
+
+PRIMARY NPC:
+- Name: ${primaryNPC.name}
+- Role: ${primaryNPC.role}
+- Relationship Score: ${primaryNPC.relationshipScore || 0} (-100 to 100)
+- Current Feeling: ${primaryNPC.currentlyFeeling || 'neutral'}
+- Your Relationship: ${primaryNPC.yourRelationship || 'acquaintance'}
+- Personality: ${primaryNPC.description || 'Professional musician'}
+
+${otherNPCs.length > 0 ? `OTHER ATTENDEES: ${otherNPCs.map(npc => `${npc.name} (${npc.role})`).join(', ')}` : ''}
+
+GAME CONTEXT:
+- Current Date: ${context.currentDate || 'Unknown'}
+- Player's Recent Activity: ${context.recentActivity || 'Continuing their music career'}
+
+Create a vivid, immersive opening narrative (2-3 sentences) that:
+1. Sets the scene with rich sensory details
+2. Establishes the atmosphere and location
+3. Shows the primary NPC's initial reaction/mood based on their relationship with the player
+4. Hints at the dynamic between characters
+5. Creates anticipation for the interaction to unfold
+6. Keeps it realistic to the music industry setting
+7. Reflects the relationship score in the NPC's demeanor
+
+Write in third person, present tense. Make it feel like the opening of an engaging story.`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: 'Generate the opening narrative for this AI roleplay event.'
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.8,
+      });
+
+      return completion.choices[0]?.message?.content?.trim() || 'The event begins as everyone gathers together...';
+    } catch (error) {
+      console.error('OpenAI API error for event narrative:', error);
+      throw new Error('Failed to generate AI event narrative');
+    }
+  }
+
+  async generateResponseOptions(event, attendeeNPCs, player, narrative, turnNumber, conversationHistory) {
+    if (!this.openai) {
+      throw new Error('OpenAI not configured. AI features are disabled.');
+    }
+
+    try {
+      const primaryNPC = attendeeNPCs[0];
+      const activityType = this.getActivityType(event.description);
+      const relationshipScore = primaryNPC.relationshipScore || 0;
+
+      const systemPrompt = `You are generating realistic response options for a player in an AI roleplay event in "Essential Popstar".
+
+CURRENT SITUATION:
+- Event: "${event.title}" - ${event.description}
+- Activity Type: ${activityType}
+- Turn: ${turnNumber}/6
+- Current Narrative: "${narrative}"
+
+PLAYER:
+- Name: ${player.name}
+- Genre: ${player.genre}
+
+PRIMARY NPC:
+- Name: ${primaryNPC.name}
+- Role: ${primaryNPC.role}
+- Relationship Score: ${relationshipScore} (-100=enemy, 0=neutral, 100=soulmate)
+- Current Feeling: ${primaryNPC.currentlyFeeling || 'neutral'}
+- Your Relationship: ${primaryNPC.yourRelationship || 'acquaintance'}
+
+CONVERSATION HISTORY:
+${conversationHistory.map((turn, i) => `Turn ${i + 1}: ${turn.playerResponse || 'No response yet'}`).join('\n')}
+
+Generate exactly 3 diverse response options that:
+1. Reflect different approaches (diplomatic, direct, emotional, professional, etc.)
+2. Are appropriate for the relationship level and activity type
+3. Feel natural and authentic to the situation
+4. Vary in tone and strategy
+5. Are 15-50 words each
+6. Use quotation marks for dialogue, action descriptions for non-verbal responses
+7. Consider the turn number (early turns = introductory, later turns = deeper/concluding)
+
+Return as a JSON array of strings:
+["Option 1", "Option 2", "Option 3"]`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: 'Generate 3 response options for this situation.'
+          }
+        ],
+        max_tokens: 400,
+        temperature: 0.9,
+      });
+
+      const response = completion.choices[0]?.message?.content?.trim();
+      
+      try {
+        const options = JSON.parse(response);
+        return Array.isArray(options) ? options : ['Continue the conversation...', 'Take a moment to think...', 'Respond thoughtfully...'];
+      } catch (parseError) {
+        console.error('Error parsing response options JSON:', parseError);
+        return ['Continue the conversation...', 'Take a moment to think...', 'Respond thoughtfully...'];
+      }
+    } catch (error) {
+      console.error('OpenAI API error for response options:', error);
+      throw new Error('Failed to generate AI response options');
+    }
+  }
+
+  async generateAIEventResponse(event, attendeeNPCs, player, playerResponse, turnNumber, conversationHistory) {
+    if (!this.openai) {
+      throw new Error('OpenAI not configured. AI features are disabled.');
+    }
+
+    try {
+      const primaryNPC = attendeeNPCs[0];
+      const activityType = this.getActivityType(event.description);
+      const relationshipScore = primaryNPC.relationshipScore || 0;
+
+      const systemPrompt = `You are generating an AI response to player actions in a music industry roleplay event in "Essential Popstar".
+
+EVENT CONTEXT:
+- Event: "${event.title}" - ${event.description}
+- Activity Type: ${activityType}
+- Turn: ${turnNumber}/6
+- Player just did: "${playerResponse}"
+
+CHARACTERS:
+Player: ${player.name} (${player.genre} artist)
+Primary NPC: ${primaryNPC.name} (${primaryNPC.role})
+- Relationship Score: ${relationshipScore} (-100 to 100)
+- Current Feeling: ${primaryNPC.currentlyFeeling || 'neutral'}
+- Your Relationship: ${primaryNPC.yourRelationship || 'acquaintance'}
+- Personality: ${primaryNPC.description || 'Professional musician'}
+
+CONVERSATION HISTORY:
+${conversationHistory.map((turn, i) => 
+  `Turn ${i + 1}: Player: "${turn.playerResponse || 'None'}" | AI: "${turn.narrative || 'None'}"`
+).join('\n')}
+
+Generate a response that includes:
+1. A narrative describing the NPC's reaction and the scene (2-3 sentences)
+2. 3 new response options for the player's next turn
+
+The narrative should:
+- Show the NPC's reaction based on their personality and relationship score
+- Advance the conversation naturally
+- Include dialogue from the NPC
+- Set up the next interaction
+- Be consistent with their established character
+- Reflect the activity's progression
+- Consider if this is getting toward the end (turns 5-6)
+
+Return as JSON:
+{
+  "narrative": "The narrative response here...",
+  "options": ["Option 1", "Option 2", "Option 3"]
+}`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: 'Generate the AI response to the player\'s action.'
+          }
+        ],
+        max_tokens: 600,
+        temperature: 0.8,
+      });
+
+      const response = completion.choices[0]?.message?.content?.trim();
+      
+      try {
+        const aiResponse = JSON.parse(response);
+        return {
+          narrative: aiResponse.narrative || 'The conversation continues...',
+          options: Array.isArray(aiResponse.options) ? aiResponse.options : ['Continue...', 'Respond...', 'React...']
+        };
+      } catch (parseError) {
+        console.error('Error parsing AI response JSON:', parseError);
+        return {
+          narrative: 'The conversation continues naturally...',
+          options: ['Continue the conversation...', 'Take a different approach...', 'Wrap up this topic...']
+        };
+      }
+    } catch (error) {
+      console.error('OpenAI API error for AI event response:', error);
+      throw new Error('Failed to generate AI event response');
+    }
+  }
+
+  getLocationFromDescription(description) {
+    const desc = description.toLowerCase();
+    if (desc.includes('lunch') || desc.includes('dinner')) return 'restaurant';
+    if (desc.includes('coffee')) return 'coffee shop';
+    if (desc.includes('park')) return 'park';
+    if (desc.includes('meeting') || desc.includes('business')) return 'office/meeting room';
+    if (desc.includes('studio')) return 'recording studio';
+    if (desc.includes('party')) return 'event venue';
+    return 'private space';
+  }
+
+  async analyzeConversationImpact(conversationHistory, event, attendeeNPCs, player) {
+    if (!this.openai) {
+      throw new Error('OpenAI not configured. AI features are disabled.');
+    }
+
+    try {
+      const systemPrompt = `You are analyzing a roleplay conversation to determine its impact on relationships in the music industry simulation game "Essential Popstar".
+
+EVENT CONTEXT:
+- Event: "${event.title}" - ${event.description}
+- Activity Type: ${this.getActivityType(event.description)}
+
+PLAYER:
+- Name: ${player.name}
+- Genre: ${player.genre}
+
+CONVERSATION HISTORY:
+${conversationHistory.map((turn, i) => 
+  `Turn ${i + 1}:\nAI: "${turn.narrative || 'None'}"\nPlayer: "${turn.playerResponse || 'No response yet'}"`
+).join('\n\n')}
+
+ATTENDEE NPCs:
+${attendeeNPCs.map(npc => 
+  `- ${npc.name} (${npc.role}) - Current Relationship Score: ${npc.relationshipScore || 0} (-100 to 100), Feeling: ${npc.currentlyFeeling || 'neutral'}`
+).join('\n')}
+
+Analyze this conversation and determine the relationship impact for each NPC. Consider:
+1. Player's tone and approach throughout the conversation
+2. How well the player matched the NPC's personality and preferences
+3. Whether the player was respectful, engaging, or dismissive
+4. If the activity type was appropriate for the relationship level
+5. Overall conversation flow and player's social skills demonstrated
+
+For each NPC, provide:
+- relationshipChange: A number from -20 to +20 representing the impact on their relationship score
+- reasoning: Brief explanation of why this change occurred
+- xpGained: XP from 10-30 based on how well the player handled the social interaction
+
+Return as JSON:
+{
+  "npcAnalysis": [
+    {
+      "npcId": "npc_id_here",
+      "npcName": "NPC Name",
+      "relationshipChange": 5,
+      "reasoning": "Brief explanation of the analysis",
+      "xpGained": 15
+    }
+  ]
+}`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: 'Analyze this conversation and determine the relationship impact.'
+          }
+        ],
+        max_tokens: 800,
+        temperature: 0.3, // Lower temperature for more consistent analysis
+      });
+
+      const response = completion.choices[0]?.message?.content?.trim();
+      
+      try {
+        const analysis = JSON.parse(response);
+        return analysis;
+      } catch (parseError) {
+        console.error('Error parsing conversation analysis JSON:', parseError);
+        // Fallback analysis
+        return {
+          npcAnalysis: attendeeNPCs.map(npc => ({
+            npcId: npc.id.toString(),
+            npcName: npc.name,
+            relationshipChange: 5, // Default positive for completing event
+            reasoning: 'AI analysis failed, using default positive outcome',
+            xpGained: 15
+          }))
+        };
+      }
+    } catch (error) {
+      console.error('OpenAI API error for conversation analysis:', error);
+      throw new Error('Failed to analyze conversation impact');
+    }
+  }
+
+  getActivityType(description) {
+    const desc = description.toLowerCase();
+    if (desc.includes('business') || desc.includes('meeting') || desc.includes('professional')) return 'business';
+    if (desc.includes('romantic') || desc.includes('date') || desc.includes('intimate')) return 'romantic';
+    if (desc.includes('fun') || desc.includes('party') || desc.includes('game')) return 'recreational';
+    if (desc.includes('lunch') || desc.includes('dinner') || desc.includes('coffee')) return 'social';
+    return 'general';
   }
 
   isAvailable() {

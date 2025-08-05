@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const referralRoutes = require('./routes/referrals');
 const aiRoutes = require('./routes/ai');
 const npcTweetsRoutes = require('./routes/npcTweets');
+const followsRoutes = require('./routes/follows');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +54,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/npc-tweets', npcTweetsRoutes);
+app.use('/api/follows', followsRoutes);
 
 // Serve static files for NPC avatars
 app.use('/assets', express.static('assets'));
@@ -79,8 +81,14 @@ app.get('/', (req, res) => {
       },
       ai: {
         generateTweet: 'POST /api/ai/generate-tweet',
+        generateComments: 'POST /api/ai/generate-comments',
         power: 'GET /api/ai/power/:userId',
         health: 'GET /api/ai/health'
+      },
+      follows: {
+        follow: 'POST /api/follows/follow',
+        unfollow: 'POST /api/follows/unfollow',
+        status: 'GET /api/follows/status/:userId'
       },
       webhooks: {
         revenuecat: 'POST /webhooks/revenuecat',
