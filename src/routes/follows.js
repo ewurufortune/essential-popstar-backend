@@ -26,14 +26,17 @@ router.post('/follow', authenticate, async (req, res) => {
     // Check follow limit
     if (currentFollows.length >= user.max_follows) {
       return res.status(400).json({ 
-        error: 'Maximum follows reached',
+        error: `Follow limit reached (${user.max_follows}). Level up to follow more NPCs!`,
         maxFollows: user.max_follows,
-        currentCount: currentFollows.length
+        currentCount: currentFollows.length,
+        currentLevel: user.level,
+        nextLevelAt: user.level * user.level * 100 // Experience needed for next level
       });
     }
 
     // Add NPC to database profiles if npcData is provided
     if (npcData) {
+      console.log(`[FOLLOW] Storing NPC profile for ${npcData.name} (ID: ${npcId})`);
       const { error: upsertError } = await database.supabase
         .from('npc_profiles')
         .upsert({
@@ -63,7 +66,11 @@ router.post('/follow', authenticate, async (req, res) => {
       if (upsertError) {
         console.warn('Warning: Could not save NPC profile:', upsertError);
         // Continue anyway - the follow can still work
+      } else {
+        console.log(`[FOLLOW] Successfully stored NPC profile for ${npcData.name}`);
       }
+    } else {
+      console.warn(`[FOLLOW] No NPC data provided for ${npcId}, only storing ID`);
     }
 
     // Add NPC to followed list
@@ -272,6 +279,59 @@ router.post('/update-relationship', authenticate, async (req, res) => {
 
   } catch (error) {
     console.error('Error updating NPC relationship:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * Debug endpoint to check follow status and NPC profiles
+ * GET /api/follows/debug
+ */
+router.get('/debug', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get user's follow data
+    const user = req.user;
+    
+    // Get all NPC profiles
+    const { data: allProfiles, error: profilesError } = await database.supabase
+      .from('npc_profiles')
+      .select('*');
+
+    if (profilesError) {
+      console.error('Error fetching all profiles:', profilesError);
+    }
+
+    // Get user's followed NPCs from profiles
+    const { data: followedProfiles, error: followedError } = await database.supabase
+      .from('npc_profiles')
+      .select('*')
+      .in('id', user.followed_npc_ids || []);
+
+    if (followedError) {
+      console.error('Error fetching followed profiles:', followedError);
+    }
+
+    res.json({
+      success: true,
+      debug: {
+        userId: userId,
+        level: user.level,
+        maxFollows: user.max_follows,
+        followedIds: user.followed_npc_ids || [],
+        followedCount: (user.followed_npc_ids || []).length,
+        totalNPCProfiles: allProfiles?.length || 0,
+        followedNPCProfiles: followedProfiles || [],
+        experienceNeededForNextLevel: (user.level + 1) * (user.level + 1) * 100
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in debug endpoint:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
