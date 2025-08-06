@@ -6,7 +6,7 @@ const { authenticate } = require('../middleware/auth');
 // Follow an NPC
 router.post('/follow', authenticate, async (req, res) => {
   try {
-    const { npcId } = req.body;
+    const { npcId, npcData } = req.body;
     const userId = req.user.id; // Get from authenticated user
 
     if (!npcId) {
@@ -30,6 +30,40 @@ router.post('/follow', authenticate, async (req, res) => {
         maxFollows: user.max_follows,
         currentCount: currentFollows.length
       });
+    }
+
+    // Add NPC to database profiles if npcData is provided
+    if (npcData) {
+      const { error: upsertError } = await database.supabase
+        .from('npc_profiles')
+        .upsert({
+          id: npcId,
+          name: npcData.name,
+          age_in_2024: npcData.ageIn2024,
+          pronoun: npcData.pronoun,
+          possessive: npcData.possessive,
+          objective: npcData.objective,
+          fans: npcData.fans,
+          genre: npcData.genre,
+          country: npcData.country,
+          awards: npcData.awards || 0,
+          nominations: npcData.nominations || 0,
+          username: npcData.username,
+          twitter_bio: npcData.twitterbio,
+          description: npcData.description,
+          currently_feeling: npcData.currentlyFeeling,
+          your_relationship: npcData.yourRelationship,
+          relationship_score: npcData.relationshipScore || 0,
+          is_verified: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        });
+
+      if (upsertError) {
+        console.warn('Warning: Could not save NPC profile:', upsertError);
+        // Continue anyway - the follow can still work
+      }
     }
 
     // Add NPC to followed list
@@ -131,6 +165,117 @@ router.get('/status/:userId', async (req, res) => {
   } catch (error) {
     console.error('Error getting follow status:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Get user's followed NPCs with full details
+ * GET /api/follows/followed
+ */
+router.get('/followed', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get user's followed NPC IDs
+    const user = req.user;
+    const followedIds = user.followed_npc_ids || [];
+
+    if (followedIds.length === 0) {
+      return res.json({
+        success: true,
+        followedNPCs: [],
+        count: 0
+      });
+    }
+
+    // Get full NPC details from npc_profiles
+    const { data: npcData, error: npcError } = await database.supabase
+      .from('npc_profiles')
+      .select('*')
+      .in('id', followedIds);
+
+    if (npcError) {
+      console.error('Error fetching NPCs:', npcError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch NPC details'
+      });
+    }
+
+    res.json({
+      success: true,
+      followedNPCs: npcData || [],
+      count: npcData?.length || 0
+    });
+
+  } catch (error) {
+    console.error('Error getting followed NPCs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * Update NPC relationship (for use by relationship system)
+ * POST /api/follows/update-relationship
+ */
+router.post('/update-relationship', authenticate, async (req, res) => {
+  try {
+    const { npcId, relationshipChange, newFeeling, newRelationship } = req.body;
+    const userId = req.user.id;
+
+    if (!npcId) {
+      return res.status(400).json({
+        success: false,
+        error: 'NPC ID is required'
+      });
+    }
+
+    // Use the database function to update relationship
+    const { data: result, error: updateError } = await database.supabase
+      .rpc('update_npc_relationship', {
+        npc_id: npcId,
+        score_change: relationshipChange || 0,
+        feeling: newFeeling,
+        relationship: newRelationship
+      });
+
+    if (updateError) {
+      console.error('Error updating NPC relationship:', updateError);
+      // Fallback to direct update if function fails
+      const { error: directUpdateError } = await database.supabase
+        .from('npc_profiles')
+        .update({
+          currently_feeling: newFeeling,
+          your_relationship: newRelationship,
+          relationship_score: database.supabase.raw(`GREATEST(-100, LEAST(100, COALESCE(relationship_score, 0) + ${relationshipChange || 0}))`),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', npcId);
+
+      if (directUpdateError) {
+        console.error('Error with direct update:', directUpdateError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to update relationship'
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      result: result,
+      message: 'Relationship updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating NPC relationship:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
   }
 });
 
