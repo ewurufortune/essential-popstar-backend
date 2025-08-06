@@ -112,8 +112,10 @@ async function generateNPCTweets(context, numberOfTweets = 8) {
     }
     
     // Check if player follows any NPCs and generate tweets from followed accounts
+    console.log('[FOLLOWED TWEETS] Context followedNPCs:', context.followedNPCs);
     const hasFollows = context.followedNPCs && context.followedNPCs !== 'None';
     let followedTweetsCount = 0;
+    console.log('[FOLLOWED TWEETS] Has follows:', hasFollows);
     
     if (hasFollows && tweets.length < numberOfTweets) {
       // Extract number of followed NPCs from context (e.g., "Following 3 NPCs" -> 3)
@@ -129,18 +131,27 @@ async function generateNPCTweets(context, numberOfTweets = 8) {
       
       // Generate tweets from followed accounts with scaled probability
       followedTweetsCount = Math.min(Math.ceil(followedCount * probability), numberOfTweets - tweets.length, 4); // Cap at 4 max
+      console.log(`[FOLLOWED TWEETS] followedCount: ${followedCount}, probability: ${probability}, followedTweetsCount: ${followedTweetsCount}`);
       
       for (let i = 0; i < followedTweetsCount; i++) {
         // Each individual tweet still has the probability check
-        if (Math.random() <= probability) {
+        const randomCheck = Math.random();
+        console.log(`[FOLLOWED TWEETS] Tweet ${i + 1}: random ${randomCheck} vs probability ${probability}`);
+        if (randomCheck <= probability) {
           try {
+            console.log('[FOLLOWED TWEETS] Calling generateFollowedAccountTweet...');
             const followedTweet = await generateFollowedAccountTweet(context);
             if (followedTweet) {
+              console.log('[FOLLOWED TWEETS] Generated followed tweet:', followedTweet.content);
               tweets.push(followedTweet);
+            } else {
+              console.log('[FOLLOWED TWEETS] generateFollowedAccountTweet returned null/undefined');
             }
           } catch (error) {
             console.error('Error generating followed account tweet:', error);
           }
+        } else {
+          console.log(`[FOLLOWED TWEETS] Tweet ${i + 1} skipped due to probability`);
         }
       }
     }
@@ -210,49 +221,44 @@ Create a realistic ${account.topic} update that could actually be posted by this
  */
 async function generateFollowedAccountTweet(context) {
   try {
-    // Generate a tweet that directly mentions or interacts with the player
-    const followedAccountTypes = [
-      {
-        type: 'industry_friend',
-        personality: 'Friendly industry contact who supports the artist and occasionally interacts publicly',
-        topics: ['supportive messages', 'collaboration hints', 'behind-the-scenes friendship']
-      },
-      {
-        type: 'mentor_figure',
-        personality: 'Established artist or industry veteran who gives advice and shows public support',
-        topics: ['career advice', 'industry wisdom', 'public endorsement']
-      },
-      {
-        type: 'collaborator',
-        personality: 'Another artist or producer who has worked with or wants to work with the player',
-        topics: ['collaboration announcements', 'studio sessions', 'creative process']
-      }
-    ];
-
-    const accountType = followedAccountTypes[Math.floor(Math.random() * followedAccountTypes.length)];
+    console.log('[FOLLOWED TWEETS] Starting generateFollowedAccountTweet with context:', context.playerName);
     
-    const systemPrompt = `Create a tweet from a ${accountType.type} who follows and knows this artist personally.
+    // Fetch actual followed NPCs from database
+    const { data: followedNPCs, error } = await supabase
+      .from('npc_profiles')
+      .select('*');
+    
+    if (error) {
+      console.error('[FOLLOWED TWEETS] Database error:', error);
+      return null;
+    }
+    
+    if (!followedNPCs || followedNPCs.length === 0) {
+      console.log('[FOLLOWED TWEETS] No followed NPCs found in database');
+      return null;
+    }
+    
+    console.log(`[FOLLOWED TWEETS] Found ${followedNPCs.length} followed NPCs in database`);
+    
+    // Select random NPC from followed list
+    const randomNPC = followedNPCs[Math.floor(Math.random() * followedNPCs.length)];
+    console.log('[FOLLOWED TWEETS] Selected NPC:', randomNPC.name, randomNPC.username);
+    
+    const systemPrompt = `You are ${randomNPC.name} (${randomNPC.username}), a ${randomNPC.age_in_2024}-year-old ${randomNPC.genre} artist from ${randomNPC.country}.
 
-Account Type: ${accountType.type}
-Personality: ${accountType.personality}
-Topics: ${accountType.topics.join(', ')}
+Your personality and bio: ${randomNPC.twitter_bio || randomNPC.description}
+Your current feeling: ${randomNPC.currently_feeling || 'creative and inspired'}
+Your relationship with the player: ${randomNPC.your_relationship || 'supportive colleague'} (relationship score: ${randomNPC.relationship_score || 50}/100)
 
-Artist Information:
-- Artist Name: ${context.playerName || 'Unknown Artist'}
-- Artist Age: ${context.playerAge || 'Unknown'}
+Artist you're tweeting about:
+- Name: ${context.playerName || 'Unknown Artist'}
+- Age: ${context.playerAge || 'Unknown'}
 - Last Released Single: ${context.lastReleasedSingle || 'None'}
 - Current Reach: ${context.reach || 'Unknown'}
 
-Generate a tweet that directly mentions or references the artist by name, showing a personal connection. This should feel like it comes from someone who actually knows the artist. Use minimal emojis (1-2 max) and NO hashtags.
-less than 100 characters.
+Generate a tweet that either mentions the player directly, supports their work, or references something you both experienced. This should feel authentic to your personality as ${randomNPC.name}. Use minimal emojis (1-2 max) and NO hashtags. Keep it under 100 characters.
 
-Response format should be a JSON object:
-{
-  "username": "@ExampleAccount",
-  "name": "Account Display Name",
-  "content": "The tweet content that mentions ${context.playerName || 'the artist'} directly",
-  "accountType": "${accountType.type}"
-}`;
+Just return the tweet content directly, no JSON formatting needed.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -263,35 +269,37 @@ Response format should be a JSON object:
         },
         {
           role: 'user',
-          content: `Generate a ${accountType.type} tweet that mentions ${context.playerName || 'the artist'}.`
+          content: `Generate a tweet from ${randomNPC.name} about or mentioning ${context.playerName || 'the artist'}.`
         }
       ],
-      max_tokens: 150,
+      max_tokens: 100,
       temperature: 0.9,
     });
 
-    const response = completion.choices[0]?.message?.content?.trim();
+    const tweetContent = completion.choices[0]?.message?.content?.trim();
     
-    try {
-      const tweetData = JSON.parse(response);
-      
-      return {
-        id: `followed_${accountType.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        username: tweetData.username,
-        name: tweetData.name,
-        avatar: getRandomAvatarImage(),
-        content: tweetData.content,
-        timestamp: new Date().toISOString(),
-        isNPC: true,
-        accountType: `followed_${accountType.type}`,
-        topic: `followed-account-${accountType.type}`
-      };
-    } catch (parseError) {
-      console.error('Error parsing followed account tweet JSON:', parseError);
+    if (!tweetContent) {
+      console.log('[FOLLOWED TWEETS] No tweet content generated');
       return null;
     }
+    
+    const tweetObject = {
+      id: `followed_${randomNPC.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      username: randomNPC.username.startsWith('@') ? randomNPC.username : `@${randomNPC.username}`,
+      name: randomNPC.name,
+      avatar: getRandomAvatarImage(),
+      content: tweetContent,
+      timestamp: new Date().toISOString(),
+      isNPC: true,
+      accountType: 'followed_npc',
+      topic: `followed-npc-${randomNPC.genre.toLowerCase()}`
+    };
+    
+    console.log('[FOLLOWED TWEETS] Generated tweet object:', tweetObject.username, '->', tweetObject.content);
+    return tweetObject;
+    
   } catch (error) {
-    console.error('Error generating followed account tweet:', error);
+    console.error('[FOLLOWED TWEETS] Error generating followed account tweet:', error);
     return null;
   }
 }

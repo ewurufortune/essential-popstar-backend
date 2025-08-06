@@ -1,7 +1,7 @@
 -- NPC Profiles table for Twitter and Calendar functionality
 -- Add this to your existing Supabase schema
 
--- NPC profiles table
+-- NPC profiles table - stores all NPC profiles (not just followed ones)
 CREATE TABLE npc_profiles (
   id TEXT PRIMARY KEY, -- matches NPC ID from frontend
   name TEXT NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE npc_profiles (
   country TEXT,
   awards INT DEFAULT 0,
   nominations INT DEFAULT 0,
-  username TEXT NOT NULL, -- Twitter username (without @)
+  username TEXT, -- Twitter username (without @) - can be generated from name
   twitter_bio TEXT,
   description TEXT,
   currently_feeling TEXT,
@@ -23,6 +23,19 @@ CREATE TABLE npc_profiles (
   is_verified BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User-NPC relationships table - tracks who follows whom with personalized data
+CREATE TABLE user_npc_relationships (
+  id BIGSERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES app_users(id),
+  npc_id TEXT NOT NULL REFERENCES npc_profiles(id),
+  relationship_score INT DEFAULT 0,
+  currently_feeling TEXT,
+  your_relationship TEXT,
+  followed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, npc_id) -- One relationship per user-NPC pair
 );
 
 -- Index for performance
