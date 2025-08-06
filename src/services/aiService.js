@@ -461,16 +461,41 @@ Return as JSON:
       const response = completion.choices[0]?.message?.content?.trim();
       
       try {
-        const aiResponse = JSON.parse(response);
+        // Clean the response to extract JSON from markdown formatting
+        let cleanedResponse = response;
+        
+        // Remove markdown code blocks (```json ... ```)
+        if (response.includes('```json')) {
+          const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) {
+            cleanedResponse = jsonMatch[1].trim();
+          }
+        } else if (response.includes('```')) {
+          // Handle generic code blocks
+          const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+          if (codeMatch) {
+            cleanedResponse = codeMatch[1].trim();
+          }
+        }
+        
+        console.log('AI Event Response - Original:', response.substring(0, 100));
+        console.log('AI Event Response - Cleaned:', cleanedResponse.substring(0, 100));
+        
+        const aiResponse = JSON.parse(cleanedResponse);
         return {
           narrative: aiResponse.narrative || 'The conversation continues...',
           options: Array.isArray(aiResponse.options) ? aiResponse.options : ['Continue...', 'Respond...', 'React...']
         };
       } catch (parseError) {
         console.error('Error parsing AI response JSON:', parseError);
+        console.error('Raw AI response:', response);
+        
+        // Return a user-friendly error that the frontend can handle
         return {
-          narrative: 'The conversation continues naturally...',
-          options: ['Continue the conversation...', 'Take a different approach...', 'Wrap up this topic...']
+          error: 'AI_PARSE_ERROR',
+          narrative: 'Something went wrong generating the AI response.',
+          options: ['Try again', 'Continue anyway', 'End event'],
+          shouldRetry: true
         };
       }
     } catch (error) {
