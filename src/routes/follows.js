@@ -123,6 +123,20 @@ router.post('/unfollow', authenticate, async (req, res) => {
     // Remove NPC from followed list
     const updatedFollows = currentFollows.filter(id => id !== npcId);
 
+    // Also remove NPC profile from database
+    console.log(`[UNFOLLOW] Deleting NPC profile for ID: ${npcId}`);
+    const { error: deleteError } = await database.supabase
+      .from('npc_profiles')
+      .delete()
+      .eq('id', npcId);
+
+    if (deleteError) {
+      console.warn('Warning: Could not delete NPC profile:', deleteError);
+      // Continue anyway - the unfollow can still work without deleting the profile
+    } else {
+      console.log(`[UNFOLLOW] Successfully deleted NPC profile for ID: ${npcId}`);
+    }
+
     const { error: updateError } = await database.supabase
       .from('app_users')
       .update({ followed_npc_ids: updatedFollows })

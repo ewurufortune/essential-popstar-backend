@@ -44,7 +44,7 @@ Generate a realistic social media post that:
 ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the current situation.'}`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-3.5-turbo-1106',
         messages: [
           {
             role: 'system',
@@ -186,6 +186,16 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
     }
 
     try {
+      // Check if there are followed NPCs that could comment
+      const followedNPCs = context?.followedNPCs || [];
+      const hasFollowedNPCs = Array.isArray(followedNPCs) && followedNPCs.length > 0;
+      
+      let followedNPCsInfo = '';
+      if (hasFollowedNPCs) {
+        followedNPCsInfo = `\nFollowed NPCs (should occasionally comment):
+${followedNPCs.map(npc => `- ${npc.name} (@${npc.username || npc.name.toLowerCase().replace(/\s+/g, '')}): ${npc.description || npc.twitterbio || 'Music artist'}`).join('\n')}`;
+      }
+
       const systemPrompt = `You are generating realistic social media comments for this tweet in the music industry simulation game "Essential Popstar".
 
 Tweet Details:
@@ -196,7 +206,7 @@ Tweet Details:
 Game Context:
 - Player Name: ${context?.playerName || 'Unknown Artist'}
 - Player Age: ${context?.playerAge || 'Unknown'}
-- Current Reach: ${context?.reach || 'Unknown'}
+- Current Reach: ${context?.reach || 'Unknown'}${followedNPCsInfo}
 
 Generate ${numberOfComments} diverse, realistic comments that people might leave on this tweet. Comments should:
 1. Vary in tone (supportive, critical, neutral, excited, etc.)
@@ -205,6 +215,7 @@ Generate ${numberOfComments} diverse, realistic comments that people might leave
 4. Be under 100 characters each
 5. Include varied usernames and display names
 6. Some should mention the player if relevant
+${hasFollowedNPCs ? '7. 1-2 comments should be from the followed NPCs listed above, using their actual usernames and personality' : ''}
 
 Response format should be a JSON array:
 [
@@ -235,11 +246,49 @@ Response format should be a JSON array:
       const response = completion.choices[0]?.message?.content?.trim();
       
       try {
-        const comments = JSON.parse(response);
+        // Clean the response to extract JSON from markdown formatting
+        let cleanedResponse = response;
+        
+        // Remove markdown code blocks (```json ... ```)
+        if (response.includes('```json')) {
+          const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) {
+            cleanedResponse = jsonMatch[1].trim();
+          }
+        } else if (response.includes('```')) {
+          // Handle generic code blocks
+          const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+          if (codeMatch) {
+            cleanedResponse = codeMatch[1].trim();
+          }
+        }
+        
+        console.log('Twitter Comments - Original:', response.substring(0, 100));
+        console.log('Twitter Comments - Cleaned:', cleanedResponse.substring(0, 100));
+        
+        const comments = JSON.parse(cleanedResponse);
         return Array.isArray(comments) ? comments : [];
       } catch (parseError) {
         console.error('Error parsing comments JSON:', parseError);
-        return [];
+        console.error('Raw comments response:', response);
+        
+        // Return fallback comments instead of empty array
+        return [
+          {
+            username: '@MusicFan2024',
+            name: 'Music Lover',
+            content: 'Great post! 🎵',
+            timestamp: new Date().toISOString(),
+            isAI: true
+          },
+          {
+            username: '@PopCultureCritic',
+            name: 'Pop Culture Critic', 
+            content: 'Interesting perspective on this.',
+            timestamp: new Date().toISOString(),
+            isAI: true
+          }
+        ];
       }
     } catch (error) {
       console.error('OpenAI API error for comments:', error);
@@ -380,10 +429,31 @@ Return as a JSON array of strings:
       const response = completion.choices[0]?.message?.content?.trim();
       
       try {
-        const options = JSON.parse(response);
+        // Clean the response to extract JSON from markdown formatting
+        let cleanedResponse = response;
+        
+        // Remove markdown code blocks (```json ... ```)
+        if (response.includes('```json')) {
+          const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) {
+            cleanedResponse = jsonMatch[1].trim();
+          }
+        } else if (response.includes('```')) {
+          // Handle generic code blocks
+          const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+          if (codeMatch) {
+            cleanedResponse = codeMatch[1].trim();
+          }
+        }
+        
+        console.log('Response Options - Original:', response.substring(0, 100));
+        console.log('Response Options - Cleaned:', cleanedResponse.substring(0, 100));
+        
+        const options = JSON.parse(cleanedResponse);
         return Array.isArray(options) ? options : ['Continue the conversation...', 'Take a moment to think...', 'Respond thoughtfully...'];
       } catch (parseError) {
         console.error('Error parsing response options JSON:', parseError);
+        console.error('Raw options response:', response);
         return ['Continue the conversation...', 'Take a moment to think...', 'Respond thoughtfully...'];
       }
     } catch (error) {
@@ -585,10 +655,31 @@ Return as JSON:
       const response = completion.choices[0]?.message?.content?.trim();
       
       try {
-        const analysis = JSON.parse(response);
+        // Clean the response to extract JSON from markdown formatting
+        let cleanedResponse = response;
+        
+        // Remove markdown code blocks (```json ... ```)
+        if (response.includes('```json')) {
+          const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) {
+            cleanedResponse = jsonMatch[1].trim();
+          }
+        } else if (response.includes('```')) {
+          // Handle generic code blocks
+          const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+          if (codeMatch) {
+            cleanedResponse = codeMatch[1].trim();
+          }
+        }
+        
+        console.log('Conversation Analysis - Original:', response.substring(0, 100));
+        console.log('Conversation Analysis - Cleaned:', cleanedResponse.substring(0, 100));
+        
+        const analysis = JSON.parse(cleanedResponse);
         return analysis;
       } catch (parseError) {
         console.error('Error parsing conversation analysis JSON:', parseError);
+        console.error('Raw analysis response:', response);
         // Fallback analysis
         return {
           npcAnalysis: attendeeNPCs.map(npc => ({
