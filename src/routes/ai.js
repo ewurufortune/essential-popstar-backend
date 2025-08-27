@@ -274,7 +274,7 @@ router.post('/generate-ai-response', authenticate, async (req, res) => {
 // Analyze conversation for relationship impact
 router.post('/analyze-conversation', authenticate, async (req, res) => {
   try {
-    const { conversationHistory, event, attendeeNPCs, player } = req.body;
+    const { conversationHistory, event, attendeeNPCs, player, lastReleasedSingle, lastReleasedAlbum, eventAims } = req.body;
     const userId = req.user.id; // Get from authenticated user
 
     if (!conversationHistory || !event || !attendeeNPCs || !player) {
@@ -299,8 +299,8 @@ router.post('/analyze-conversation', authenticate, async (req, res) => {
       });
     }
 
-    // Analyze conversation for relationship impact
-    const analysis = await aiService.analyzeConversationImpact(conversationHistory, event, attendeeNPCs, player);
+    // Analyze conversation for relationship impact and aims achievement
+    const analysis = await aiService.analyzeConversationImpact(conversationHistory, event, attendeeNPCs, player, lastReleasedSingle, lastReleasedAlbum, eventAims);
 
     // Deduct power after successful analysis
     const newPowerAmount = await aiService.deductPowerForAI(userId, 1);

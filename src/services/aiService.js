@@ -399,13 +399,14 @@ CONVERSATION HISTORY:
 ${conversationHistory.map((turn, i) => `Turn ${i + 1}: ${turn.playerResponse || 'No response yet'}`).join('\n')}
 
 Generate exactly 3 diverse response options that:
-1. Reflect different approaches (diplomatic, direct, emotional, professional, etc.)
-2. Are appropriate for the relationship level and activity type
-3. Feel natural and authentic to the situation
-4. Vary in tone and strategy
-5. Are 15-50 words each
-6. Use quotation marks for dialogue, action descriptions for non-verbal responses
-7. Consider the turn number (early turns = introductory, later turns = deeper/concluding)
+1. Are short, decisive actions (5-10 words maximum)
+2. Drive the narrative forward with meaningful choices
+3. Create clear consequences and story progression
+4. Reflect different approaches (aggressive, diplomatic, strategic, emotional, etc.)
+5. Focus on actions that change the dynamic or situation
+6. Avoid passive gestures - use impactful, story-driving verbs
+7. Each option should lead to distinctly different narrative paths
+8. Consider the turn number (early turns = set direction, later turns = climactic choices)
 
 Return as a JSON array of strings:
 ["Option 1", "Option 2", "Option 3"]`;
@@ -585,21 +586,26 @@ Return as JSON:
     return 'private space';
   }
 
-  async analyzeConversationImpact(conversationHistory, event, attendeeNPCs, player) {
+  async analyzeConversationImpact(conversationHistory, event, attendeeNPCs, player, lastReleasedSingle = null, lastReleasedAlbum = null, eventAims = null) {
     if (!this.openai) {
       throw new Error('OpenAI not configured. AI features are disabled.');
     }
 
     try {
-      const systemPrompt = `You are analyzing a roleplay conversation to determine its impact on relationships in the music industry simulation game "Essential Popstar".
+      const systemPrompt = `You are analyzing a roleplay conversation to determine its impact on relationships and aims achievement in the music industry simulation game "Essential Popstar".
 
 EVENT CONTEXT:
 - Event: "${event.title}" - ${event.description}
 - Activity Type: ${this.getActivityType(event.description)}
+- Event Aims: ${eventAims || 'None specified'}
 
 PLAYER:
 - Name: ${player.name}
 - Genre: ${player.genre}
+
+MUSIC CONTEXT:
+${lastReleasedSingle ? `- Last Released Single: "${lastReleasedSingle.name}" (${lastReleasedSingle.genre})` : '- No recent singles'}
+${lastReleasedAlbum ? `- Last Released Album: "${lastReleasedAlbum.name}" (${lastReleasedAlbum.childPackageIds ? lastReleasedAlbum.childPackageIds.length : 0} tracks)` : '- No recent albums'}
 
 CONVERSATION HISTORY:
 ${conversationHistory.map((turn, i) => 
@@ -611,29 +617,41 @@ ${attendeeNPCs.map(npc =>
   `- ${npc.name} (${npc.role}) - Current Relationship Score: ${npc.relationshipScore || 0} (-100 to 100), Feeling: ${npc.currentlyFeeling || 'neutral'}`
 ).join('\n')}
 
-Analyze this conversation and determine the relationship impact for each NPC. Consider:
+Analyze this conversation and determine:
+1. Relationship impact for each NPC
+2. Which event aims (if any) were achieved
+
+RELATIONSHIP ANALYSIS - Consider:
 1. Player's tone and approach throughout the conversation
 2. How well the player matched the NPC's personality and preferences
 3. Whether the player was respectful, engaging, or dismissive
 4. If the activity type was appropriate for the relationship level
 5. Overall conversation flow and player's social skills demonstrated
 
+AIMS ANALYSIS - Check if the conversation achieved these specific goals:
+- "discuss record deal": Look for explicit discussion about record labels, contracts, signing deals, or business partnerships
+- "feature on a track": Look for agreements to collaborate musically, featuring on songs, or working together on tracks
+- "joint album": Look for discussion about creating an album together, collaborative projects, or multi-artist releases
+
 For each NPC, provide:
 - relationshipChange: A number from -20 to +20 representing the impact on their relationship score
 - reasoning: Brief explanation of why this change occurred
 - xpGained: XP from 10-30 based on how well the player handled the social interaction
+
+For aims achievement, list any aims that were clearly accomplished through the conversation.
 
 Return as JSON:
 {
   "npcAnalysis": [
     {
       "npcId": "npc_id_here",
-      "npcName": "NPC Name",
+      "npcName": "NPC Name", 
       "relationshipChange": 5,
       "reasoning": "Brief explanation of the analysis",
       "xpGained": 15
     }
-  ]
+  ],
+  "achievedAims": ["aim1", "aim2"]
 }`;
 
       const completion = await this.openai.chat.completions.create({
@@ -688,7 +706,8 @@ Return as JSON:
             relationshipChange: 5, // Default positive for completing event
             reasoning: 'AI analysis failed, using default positive outcome',
             xpGained: 15
-          }))
+          })),
+          achievedAims: [] // No aims achieved in fallback
         };
       }
     } catch (error) {
