@@ -494,13 +494,16 @@ const PLAYER_FOCUSED_ACCOUNT_TYPES = [
  * @param {number} numberOfTweets - Number of tweets to generate (default: 5)
  * @returns {Array} Generated NPC tweets
  */
-async function generateNPCTweets(context, numberOfTweets = 8) {
+async function generateNPCTweets(context, numberOfTweets = 7) {
   try {
     const tweets = [];
     const PREDEFINED_ACCOUNTS = getPredefinedAccounts();
     
-    // Generate 2 tweets from predefined accounts (ESPN, F1)
-    for (const account of PREDEFINED_ACCOUNTS) {
+    // Generate 2-3 tweets from random predefined accounts (not all of them)
+    const shuffledAccounts = PREDEFINED_ACCOUNTS.sort(() => Math.random() - 0.5);
+    const selectedAccounts = shuffledAccounts.slice(0, 3); // Take first 3 random accounts
+    
+    for (const account of selectedAccounts) {
       try {
         const tweet = await generateTweetForPredefinedAccount(account);
         if (tweet) {
@@ -580,7 +583,10 @@ async function generateNPCTweets(context, numberOfTweets = 8) {
       }
     }
     
-    return tweets;
+    // Randomize the order of all tweets before returning
+    const shuffledTweets = tweets.sort(() => Math.random() - 0.5);
+    
+    return shuffledTweets;
   } catch (error) {
     console.error('Error generating NPC tweets:', error);
     throw error;
@@ -602,7 +608,7 @@ Generate a tweet about ${account.topic}. This should be completely unrelated to 
 Create a realistic ${account.topic} update that could actually be posted by this account today.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
@@ -671,7 +677,7 @@ Generate a tweet that either mentions the player directly, supports their work, 
 Just return the tweet content directly, no JSON formatting needed.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
@@ -759,7 +765,7 @@ Response format should be a JSON object:
 }`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
@@ -832,8 +838,8 @@ Response format should be a JSON object:
  */
 async function generateAndStoreNPCTweets(userId, context) {
   try {
-    // Generate 8 tweets total: 2 predefined (ESPN, F1) + followed NPC tweets (scaled by count) + remaining player-focused
-    const allTweets = await generateNPCTweets(context, 8);
+    // Generate 7 tweets total: 2-3 predefined + followed NPC tweets (scaled by count) + remaining player-focused
+    const allTweets = await generateNPCTweets(context, 7);
     
     // Store tweets in database (if needed for persistence)
     // For now, we'll just return them to be handled by the client

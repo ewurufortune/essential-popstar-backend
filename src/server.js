@@ -56,8 +56,12 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/npc-tweets', npcTweetsRoutes);
 app.use('/api/follows', followsRoutes);
 
-// Serve static files for NPC avatars
-app.use('/assets', express.static('assets'));
+// Serve static files for NPC avatars with cache headers
+app.use('/assets', express.static('assets', {
+  maxAge: '1d', // Cache for 1 day
+  etag: true,
+  lastModified: true
+}));
 
 // Root endpoint
 app.get('/', (req, res) => {
