@@ -44,7 +44,7 @@ Generate a realistic social media post that:
 ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the current situation.'}`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
@@ -230,7 +230,7 @@ Response format should be a JSON array:
 ]`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
@@ -346,7 +346,7 @@ Create a vivid, immersive opening narrative (2-3 sentences) that:
 Write in third person, present tense. Make it feel like the opening of an engaging story.`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
@@ -414,7 +414,7 @@ Return as a JSON array of strings:
 ["Option 1", "Option 2", "Option 3"]`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
@@ -516,7 +516,7 @@ Return as JSON:
 }`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
@@ -657,7 +657,7 @@ Return as JSON:
 }`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
@@ -753,7 +753,7 @@ Generate 1-3 INDEPENDENT reaction tweets (not replies) as JSON array:
 [{"npcId": "npc_id", "content": "independent tweet referencing/reacting to the player's post"}]`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Generate realistic NPC reactions to this player tweet.' }
@@ -798,7 +798,7 @@ Generate as JSON array with realistic usernames and display names:
 Keep tweets under 280 characters, use minimal emojis, make them feel authentic.`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Generate realistic event coverage tweets.' }
