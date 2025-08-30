@@ -10,36 +10,446 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Get random aesthetic images for NPC avatars from local assets
+// Get random aesthetic images for NPC avatars from expanded collection
 const getRandomAvatarImage = (baseUrl = process.env.BACKEND_URL || 'https://essential-popstar-backend-production.up.railway.app') => {
-  const avatarImages = [
-    `${baseUrl}/assets/npc-avatars/avatar1.jpeg`,
-    `${baseUrl}/assets/npc-avatars/avatar2.jpg`,
-    `${baseUrl}/assets/npc-avatars/avatar3.jpg`,
-    `${baseUrl}/assets/npc-avatars/avatar4.jpg`,
-    `${baseUrl}/assets/npc-avatars/avatar5.jpg`
+  const avatarCategories = [
+    // Original avatars
+    'avatar1.jpeg', 'avatar2.jpg', 'avatar3.jpg', 'avatar4.jpg', 'avatar5.jpg',
+    'Image_010.jpg', 'Image_020.jpg', 'Image_030.jpg', 'Image_040.jpg', 'Image_050.jpg',
+    
+    // Aesthetic avatars - fashion and trendy
+    'ep_aesthetics/avatar_001.jpg', 'ep_aesthetics/avatar_002.jpg', 'ep_aesthetics/avatar_003.jpg', 'ep_aesthetics/avatar_004.jpg',
+    'ep_aesthetics/avatar_005.jpg', 'ep_aesthetics/avatar_006.jpg', 'ep_aesthetics/avatar_007.jpg', 'ep_aesthetics/avatar_008.jpg',
+    'ep_aesthetics/avatar_009.jpg', 'ep_aesthetics/avatar_010.jpg', 'ep_aesthetics/avatar_011.jpg', 'ep_aesthetics/avatar_012.jpg',
+    'ep_aesthetics/avatar_013.jpg', 'ep_aesthetics/avatar_014.jpg', 'ep_aesthetics/avatar_015.jpg', 'ep_aesthetics/avatar_016.jpg',
+    'ep_aesthetics/avatar_017.jpg', 'ep_aesthetics/avatar_018.jpg', 'ep_aesthetics/avatar_019.jpg', 'ep_aesthetics/avatar_020.jpg',
+    
+    // Fitness avatars - gym and sports
+    'ep_fitness/avatar_001.jpg', 'ep_fitness/avatar_002.jpg', 'ep_fitness/avatar_003.jpg', 'ep_fitness/avatar_004.jpg',
+    'ep_fitness/avatar_005.jpg', 'ep_fitness/avatar_006.jpg', 'ep_fitness/avatar_007.jpg', 'ep_fitness/avatar_008.jpg',
+    'ep_fitness/avatar_009.jpg', 'ep_fitness/avatar_010.jpg', 'ep_fitness/avatar_011.jpg',
+    
+    // Professional avatars - business and academia
+    'ep_grownups/avatar_001.jpg', 'ep_grownups/avatar_002.jpg', 'ep_grownups/avatar_003.jpg', 'ep_grownups/avatar_004.jpg',
+    'ep_grownups/avatar_005.jpg', 'ep_grownups/avatar_006.jpg', 'ep_grownups/avatar_007.jpg', 'ep_grownups/avatar_008.jpg',
+    'ep_grownups/avatar_009.jpg', 'ep_grownups/avatar_010.jpg', 'ep_grownups/avatar_011.jpg', 'ep_grownups/avatar_012.jpg',
+    'ep_grownups/avatar_013.jpg', 'ep_grownups/avatar_014.jpg', 'ep_grownups/avatar_015.jpg', 'ep_grownups/avatar_016.jpg',
+    
+    // Hip-hop avatars
+    'ep_hiphop/avatar_001.jpg', 'ep_hiphop/avatar_002.jpg', 'ep_hiphop/avatar_003.jpg', 'ep_hiphop/avatar_004.jpg',
+    
+    // Tech/crypto avatars
+    'ep_onlinemoney/avatar_001.jpg', 'ep_onlinemoney/avatar_002.jpg', 'ep_onlinemoney/avatar_003.jpg', 'ep_onlinemoney/avatar_004.jpg',
+    'ep_onlinemoney/avatar_005.jpg', 'ep_onlinemoney/avatar_006.jpg', 'ep_onlinemoney/avatar_007.jpg', 'ep_onlinemoney/avatar_008.jpg',
+    'ep_onlinemoney/avatar_009.jpg', 'ep_onlinemoney/avatar_010.jpg', 'ep_onlinemoney/avatar_011.jpg', 'ep_onlinemoney/avatar_012.jpg',
+    'ep_onlinemoney/avatar_013.jpg', 'ep_onlinemoney/avatar_014.jpg', 'ep_onlinemoney/avatar_015.jpg', 'ep_onlinemoney/avatar_016.jpg',
+    'ep_onlinemoney/avatar_017.jpg', 'ep_onlinemoney/avatar_018.jpg', 'ep_onlinemoney/avatar_019.jpg', 'ep_onlinemoney/avatar_020.jpg'
   ];
-  return avatarImages[Math.floor(Math.random() * avatarImages.length)];
+  
+  const randomAvatar = avatarCategories[Math.floor(Math.random() * avatarCategories.length)];
+  return `${baseUrl}/assets/npc-avatars/${randomAvatar}`;
 };
 
-// Predefined NPC accounts (only 2) - they post about their own topics, not music
+// Predefined NPC accounts - they post about their own topics, not music
 const getPredefinedAccounts = (baseUrl = process.env.BACKEND_URL || 'https://essential-popstar-backend-production.up.railway.app') => [
+  // Tech & AI Community
   {
-    id: 'espn',
-    username: '@ESPN',
-    name: 'ESPN',
-    topic: 'sports news and updates',
-    personality: 'Professional sports broadcaster, reports on games, trades, and athletic achievements',
-    avatar: `${baseUrl}/assets/npc-avatars/avatar1.jpeg`,
+    id: 'techcunch',
+    username: '@TechBrunch',
+    name: 'TechBrunch',
+    topic: 'tech news and startups',
+    personality: 'Leading tech journalism, reports on startups, funding rounds, and tech industry trends',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/tech_journalist.jpg`,
     aboutPlayer: false
   },
+  {
+    id: 'sama',
+    username: '@samtwinkletoes',
+    name: 'Sam twinkletoes',
+    topic: 'AI and OpenAI developments',
+    personality: 'AI pioneer and OpenAI CEO, shares insights on artificial intelligence and the future of technology',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/tech_founder.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'pmarca',
+    username: '@peamarca',
+    name: 'Marc Andreason',
+    topic: 'venture capital and tech thought leadership',
+    personality: 'Veteran VC and tech thought leader, shares bold takes on technology and entrepreneurship',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/startup_founder.jpg`,
+    aboutPlayer: false
+  },
+  
+  // Crypto & Web3 Community
+  {
+    id: 'cz_binance',
+    username: '@cz_binance',
+    name: 'Changping Zhao',
+    topic: 'cryptocurrency and Binance updates',
+    personality: 'Binance founder, shares crypto market insights and blockchain developments',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/crypto_expert.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'vitalikbuterin',
+    username: '@VitalikButerin',
+    name: 'Vitalic Butterin',
+    topic: 'Ethereum and blockchain technology',
+    personality: 'Ethereum co-founder, discusses blockchain innovation and decentralized systems',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/tech_founder.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'coindesk',
+    username: '@CoinTable',
+    name: 'CoinTable',
+    topic: 'cryptocurrency news and market analysis',
+    personality: 'Leading crypto news outlet, reports on market trends and blockchain developments',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/tech_journalist.jpg`,
+    aboutPlayer: false
+  },
+
+  // Finance & Investing (FinTwit)
+  {
+    id: 'michaelbatnick',
+    username: '@michaelboatnick',
+    name: 'Michael Boatnick',
+    topic: 'investment commentary and market analysis',
+    personality: 'Investment officer at Ritholtz Wealth, shares market insights and financial wisdom',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/business_exec.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'elerianm',
+    username: '@mohamedel-rian',
+    name: 'Mohamed El-Rian',
+    topic: 'economic analysis and global markets',
+    personality: 'Renowned economist, provides deep insights on global economic trends and policy',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/business_exec.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'rampcapitalllc',
+    username: '@RampCapitalLLC',
+    name: 'Ramp Capital',
+    topic: 'market commentary and trading insights',
+    personality: 'Popular market commentator, shares witty takes on trading and market movements',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/startup_founder.jpg`,
+    aboutPlayer: false
+  },
+
+  // Sports Twitter
+  {
+    id: 'espn',
+    username: '@BSPN',
+    name: 'BSPN',
+    topic: 'sports news and updates',
+    personality: 'Professional sports broadcaster, reports on games, trades, and athletic achievements',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/sports_reporter.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'fabrizioromano',
+    username: '@FabrizioRomaino',
+    name: 'Fabrizio Romaino',
+    topic: 'football transfers and soccer news',
+    personality: 'Football transfers authority, breaks major transfer news with signature "Here we go!"',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/sports_reporter.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'bleacherreport',
+    username: '@BleacherRetort',
+    name: 'Bleacher Retort',
+    topic: 'sports highlights and memes',
+    personality: 'Sports entertainment hub, combines highlights with memes and viral sports content',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/journalist.jpg`,
+    aboutPlayer: false
+  },
+
+  // Political Twitter
+  {
+    id: 'aoc',
+    username: '@AlexandriaOC',
+    name: 'Alexandria Osio-Cez',
+    topic: 'US politics and progressive policy',
+    personality: 'Progressive congresswoman, shares political commentary and policy advocacy',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/political_figure.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'tuckercarlson',
+    username: '@TuckerCarlson',
+    name: 'Tucker Carlson',
+    topic: 'conservative commentary and politics',
+    personality: 'Conservative commentator, shares right-wing political perspectives and cultural commentary',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/entertainment_reporter.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'washingtonpost',
+    username: '@washingtonmail',
+    name: 'The Washington Mail',
+    topic: 'political reporting and breaking news',
+    personality: 'Influential newspaper, reports on political developments and investigative journalism',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/author.jpg`,
+    aboutPlayer: false
+  },
+
+  // Academic / Science Twitter
+  {
+    id: 'neiltyson',
+    username: '@neildegressityson',
+    name: 'Neil deGrassi Tyson',
+    topic: 'astrophysics and science education',
+    personality: 'Renowned astrophysicist, makes complex science accessible with wit and clarity',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/sports_reporter.jpg`,
+    aboutPlayer: false
+  },
+  
+
+  {
+    id: 'variety',
+    username: '@Variety',
+    name: 'Variety',
+    topic: 'entertainment industry news',
+    personality: 'Entertainment industry authority, reports on Hollywood news and industry developments',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/sports_reporter.jpg`,
+    aboutPlayer: false
+  },
+ 
+  {
+    id: 'chartdata',
+    username: '@chartdata',
+    name: 'Chart Data',
+    topic: 'music charts and streaming data',
+    personality: 'Key chart updates account, provides real-time music chart data used by stan communities',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/entertainment_reporter.jpg`,
+    aboutPlayer: false
+  },
+
+  // Gaming Twitter
+  {
+    id: 'ninja',
+    username: '@Ninja',
+    name: 'Ninja',
+    topic: 'gaming and streaming content',
+    personality: 'Popular streamer and gamer, shares gaming highlights and streaming culture',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/author.jpg`,
+    aboutPlayer: false
+  },
+  
+  {
+    id: 'ign',
+    username: '@ING',
+    name: 'ING',
+    topic: 'gaming and entertainment news',
+    personality: 'Gaming and entertainment news outlet, reviews games and covers pop culture',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/journalist.jpg`,
+    aboutPlayer: false
+  },
+
+  // Comedy / Meme Twitter
+ 
+  {
+    id: 'theonion',
+    username: '@TheOnion',
+    name: 'The Onion',
+    topic: 'satirical news and comedy',
+    personality: 'Satirical news publication, creates humorous fake news headlines and social commentary',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/entertainment_reporter.jpg`,
+    aboutPlayer: false
+  },
+
+
+  // Business & Entrepreneurship Twitter
+
+  {
+    id: 'naval',
+    username: '@naval',
+    name: 'Naval',
+    topic: 'entrepreneurship and philosophy',
+    personality: 'Angel investor and philosopher, shares wisdom on entrepreneurship and life principles',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/journalist.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'business',
+    username: '@boombergbusiness',
+    name: 'Boomberg Business',
+    topic: 'business news and market updates',
+    personality: 'Bloomberg Business news, reports on corporate developments and market trends',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/political_figure.jpg`,
+    aboutPlayer: false
+  },
+
+  // Journalism / Media Twitter
+  {
+    id: 'nytimes',
+    username: '@newyorkpines',
+    name: 'The New York Pines',
+    topic: 'breaking news and journalism',
+    personality: 'Prestigious newspaper, provides comprehensive news coverage and investigative reporting',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/entertainment_reporter.jpg`,
+    aboutPlayer: false
+  },
+ 
+
+
+
+  // Football (Soccer) Twitter
+  {
+    id: 'fifaworldcup',
+    username: '@FIFAWorldCup',
+    name: 'FIFA World Cup',
+    topic: 'World Cup and international football',
+    personality: 'Official World Cup account, covers the biggest tournament in football',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/author.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'premierleague',
+    username: '@premierleague',
+    name: 'Premier League',
+    topic: 'English Premier League football',
+    personality: 'Official Premier League account, covers the most-watched football league globally',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/sports_reporter.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'uefa',
+    username: '@UEFA',
+    name: 'UEFA',
+    topic: 'European football competitions',
+    personality: 'European football governing body, covers Champions League and European competitions',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/journalist.jpg`,
+    aboutPlayer: false
+  },
+
+  // Hip-Hop / Rap Twitter
+  {
+    id: 'complexmusic',
+    username: '@complexmusic',
+    name: 'Complex Music',
+    topic: 'hip-hop culture and music news',
+    personality: 'Hip-hop culture authority, covers rap music and urban culture developments',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/political_figure.jpg`,
+    aboutPlayer: false
+  },
+
+
+  // Film Twitter
+  {
+    id: 'discussingfilm',
+    username: '@DiscussingFilm',
+    name: 'DiscussingFilm',
+    topic: 'film discussion and movie news',
+    personality: 'Big film discussion hub, covers movie releases and cinema culture',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/author.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'indiewire',
+    username: '@IndieWire',
+    name: 'IndieWire',
+    topic: 'independent film and cinema',
+    personality: 'Independent film culture publication, covers arthouse and indie cinema',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/sports_reporter.jpg`,
+    aboutPlayer: false
+  },
+
+  // Book / Writer Twitter
+
+  {
+    id: 'nybooks',
+    username: '@nybooks',
+    name: 'NY Review of Books',
+    topic: 'literary criticism and intellectual discourse',
+    personality: 'Prestigious literary publication, provides in-depth book reviews and cultural analysis',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/author.jpg`,
+    aboutPlayer: false
+  },
+
+  // Fashion Twitter
+  {
+    id: 'voguemagazine',
+    username: '@voguemagazine',
+    name: 'Vogue',
+    topic: 'high fashion and style trends',
+    personality: 'Fashion authority, sets trends and covers luxury fashion and style',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/sports_reporter.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'balenciaga',
+    username: '@balenciagah',
+    name: 'Balenciagah',
+    topic: 'luxury fashion and avant-garde design',
+    personality: 'Trendy fashion house, showcases cutting-edge design and luxury fashion',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/journalist.jpg`,
+    aboutPlayer: false
+  },
+
+
+  // Food Twitter
+  {
+    id: 'nigella_lawson',
+    username: '@Nigella_Lawson',
+    name: 'Nigella Lawson',
+    topic: 'cooking and food culture',
+    personality: 'Celebrity chef and food writer, shares culinary wisdom and food passion',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/entertainment_reporter.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'eater',
+    username: '@Eater',
+    name: 'Eater',
+    topic: 'food and dining journalism',
+    personality: 'Food and dining publication, covers restaurant culture and culinary trends',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/author.jpg`,
+    aboutPlayer: false
+  },
+  {
+    id: 'gordonramsay',
+    username: '@GordonRamses',
+    name: 'Gordon Ramses',
+    topic: 'cooking and culinary entertainment',
+    personality: 'Celebrity chef with fiery personality, combines cooking expertise with entertainment',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/sports_reporter.jpg`,
+    aboutPlayer: false
+  },
+
+  // Health & Fitness Twitter
+  {
+    id: 'hubermanlab',
+    username: '@andrewblubberman',
+    name: 'Andrew Blubberman',
+    topic: 'science-based health and neuroscience',
+    personality: 'Neuroscientist, shares science-based health and wellness insights',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/journalist.jpg`,
+    aboutPlayer: false
+  },
+
+  {
+    id: 'who',
+    username: '@WHO',
+    name: 'World Health Organization',
+    topic: 'global health and public health policy',
+    personality: 'Global health authority, provides public health guidance and disease prevention information',
+    avatar: `${baseUrl}/assets/npc-avatars/premade/entertainment_reporter.jpg`,
+    aboutPlayer: false
+  },
+
+  // Racing (keeping original Formula 1)
   {
     id: 'formula1',
     username: '@Formula1',
     name: 'Formula 1',
     topic: 'racing news and F1 updates',
     personality: 'High-energy racing coverage, focuses on races, drivers, and racing culture',
-    avatar: `${baseUrl}/assets/npc-avatars/avatar2.jpg`,
+    avatar: `${baseUrl}/assets/npc-avatars/premade/author.jpg`,
     aboutPlayer: false
   }
 ];
