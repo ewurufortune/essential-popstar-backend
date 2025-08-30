@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../services/database');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * POST /api/auth/apple
@@ -58,6 +59,65 @@ router.post('/apple', async (req, res) => {
       error: 'Failed to sync Apple user',
       details: error.message
     });
+  }
+});
+
+/**
+ * POST /api/auth/add-experience
+ * Add experience to player and update level
+ */
+router.post('/add-experience', authenticate, async (req, res) => {
+  try {
+    const { experience } = req.body;
+    const userId = req.user.id;
+
+    if (!experience || experience < 0) {
+      return res.status(400).json({ 
+        error: 'Valid experience amount is required' 
+      });
+    }
+
+    // Get current user data
+    const { data: user, error: fetchError } = await db.supabase
+      .from('app_users')
+      .select('experience, level')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching user:', fetchError);
+      return res.status(500).json({ error: 'Failed to fetch user data' });
+    }
+
+    const currentExperience = user.experience || 0;
+    const newExperience = currentExperience + experience;
+    const newLevel = Math.max(1, Math.floor(Math.sqrt(newExperience / 100)) + 1);
+
+    // Update user experience and level
+    const { error: updateError } = await db.supabase
+      .from('app_users')
+      .update({ 
+        experience: newExperience,
+        level: newLevel
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Error updating user experience:', updateError);
+      return res.status(500).json({ error: 'Failed to update experience' });
+    }
+
+    res.json({
+      success: true,
+      experienceAdded: experience,
+      newExperience: newExperience,
+      newLevel: newLevel,
+      leveledUp: newLevel > (user.level || 1)
+    });
+
+  } catch (error) {
+    console.error('Error adding experience:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
