@@ -725,6 +725,94 @@ Return as JSON:
     return 'general';
   }
 
+  async generatePlayerTweetReactions(playerTweet, followedNPCs, context) {
+    if (!this.openai) {
+      throw new Error('OpenAI not configured. AI features are disabled.');
+    }
+
+    try {
+      const systemPrompt = `Generate 1-3 independent Twitter posts from NPCs reacting to what the player just tweeted. These are NOT direct replies or comments, but separate tweets that reference or react to the player's post.
+
+IMPORTANT: Generate INDEPENDENT TWEETS that reference the player, not direct replies or comments.
+
+Examples of good reaction tweets:
+- "Just saw @${context.playerName.toLowerCase().replace(' ', '')} post about [topic] and honestly... facts 💯"
+- "Y'all see what @${context.playerName.toLowerCase().replace(' ', '')} just shared? This is exactly what I've been saying"
+- "When @${context.playerName.toLowerCase().replace(' ', '')} tweets you know it's about to be a moment"
+- "@${context.playerName.toLowerCase().replace(' ', '')} really said [reference to content] and the timeline is NOT ready for this conversation"
+
+Player Tweet: "${playerTweet.content}"
+Player: @${context.playerName.toLowerCase().replace(' ', '')}
+
+NPCs and their personalities:
+${followedNPCs.map(npc => `- ${npc.name} (${npc.description}) - Relationship: ${npc.relationship_score || 50}/100`).join('\n')}
+
+Generate 1-3 INDEPENDENT reaction tweets (not replies) as JSON array:
+[{"npcId": "npc_id", "content": "independent tweet referencing/reacting to the player's post"}]`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Generate realistic NPC reactions to this player tweet.' }
+        ],
+        max_tokens: 200,
+        temperature: 0.8,
+      });
+
+      const response = completion.choices[0]?.message?.content?.trim();
+      return JSON.parse(response);
+    } catch (error) {
+      console.error('OpenAI API error for player tweet reactions:', error);
+      throw new Error('Failed to generate player tweet reactions');
+    }
+  }
+
+  async generateEventCoverage(event, player, context, isPublicEvent) {
+    if (!this.openai) {
+      throw new Error('OpenAI not configured. AI features are disabled.');
+    }
+
+    try {
+      const systemPrompt = `Generate 2-3 realistic social media posts about a celebrity event. 
+
+Event Details:
+- Event: ${event.title}
+- Player: ${player.name}
+- Location: ${event.location || 'undisclosed location'}
+- Public Event: ${isPublicEvent ? 'Yes' : 'No (private/secretive)'}
+- Player Fame Level: ${context.reach || 'Rising star'}
+
+${isPublicEvent 
+  ? 'Generate PUBLIC coverage tweets (sightings, red carpet, official coverage)'
+  : 'Generate RUMOR tweets (whispers, insider sources, speculation)'
+}
+
+Blog account options: @PopBuzz, @chartdata, @PopBase, @PopCrave, @theshaderoom, @pagesix, @enews, @tmz
+
+Generate as JSON array with realistic usernames and display names:
+[{"username": "@account", "name": "Account Name", "content": "tweet content"}]
+
+Keep tweets under 280 characters, use minimal emojis, make them feel authentic.`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Generate realistic event coverage tweets.' }
+        ],
+        max_tokens: 300,
+        temperature: 0.9,
+      });
+
+      const response = completion.choices[0]?.message?.content?.trim();
+      return JSON.parse(response);
+    } catch (error) {
+      console.error('OpenAI API error for event coverage:', error);
+      throw new Error('Failed to generate event coverage');
+    }
+  }
+
   isAvailable() {
     return this.openai !== null;
   }

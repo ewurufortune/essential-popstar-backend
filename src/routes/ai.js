@@ -336,6 +336,92 @@ router.post('/analyze-conversation', authenticate, async (req, res) => {
   }
 });
 
+// Generate AI reactions to player tweets
+router.post('/generate-player-tweet-reactions', authenticate, async (req, res) => {
+  try {
+    const { playerTweet, followedNPCs, context } = req.body;
+    const userId = req.user.id;
+
+    if (!playerTweet || !followedNPCs || !context) {
+      return res.status(400).json({ error: 'Player tweet, followed NPCs, and context are required' });
+    }
+
+    // Check if AI service is available
+    if (!aiService.isAvailable()) {
+      return res.status(503).json({ 
+        error: 'AI service is currently unavailable',
+        fallback: true 
+      });
+    }
+
+    // Check user power
+    const powerCheck = await aiService.checkPowerForAI(userId, 1);
+    if (!powerCheck.hasEnoughPower) {
+      return res.status(402).json({ 
+        error: 'Insufficient power for AI generation',
+        currentPower: powerCheck.currentPower,
+        requiredPower: powerCheck.requiredPower
+      });
+    }
+
+    // Generate reactions from followed NPCs
+    const reactions = await aiService.generatePlayerTweetReactions(playerTweet, followedNPCs, context);
+
+    // Deduct power after successful generation
+    const newPowerAmount = await aiService.deductPowerForAI(userId, 1);
+
+    res.json({
+      success: true,
+      reactions: reactions,
+      currentPower: newPowerAmount
+    });
+
+  } catch (error) {
+    console.error('Error generating player tweet reactions:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate tweet reactions',
+      fallback: true 
+    });
+  }
+});
+
+// Generate AI event coverage tweets
+router.post('/generate-event-coverage', authenticate, async (req, res) => {
+  try {
+    const { event, player, context, isPublicEvent } = req.body;
+    const userId = req.user.id;
+
+    if (!event || !player || !context) {
+      return res.status(400).json({ error: 'Event, player, and context are required' });
+    }
+
+    // Check if AI service is available
+    if (!aiService.isAvailable()) {
+      return res.status(503).json({ 
+        error: 'AI service is currently unavailable',
+        fallback: true 
+      });
+    }
+
+    // Check user power (no power deduction for event coverage - it's automatic)
+    
+    // Generate event coverage tweets
+    const coverageTweets = await aiService.generateEventCoverage(event, player, context, isPublicEvent);
+
+    res.json({
+      success: true,
+      tweets: coverageTweets
+    });
+
+  } catch (error) {
+    console.error('Error generating event coverage:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate event coverage',
+      fallback: true 
+    });
+  }
+});
+
 // Health check for AI service
 router.get('/health', (req, res) => {
   res.json({
