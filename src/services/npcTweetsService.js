@@ -619,7 +619,7 @@ Create a realistic ${account.topic} update that could actually be posted by this
           content: `Generate a ${account.topic} tweet.`
         }
       ],
-      max_tokens: 100,
+      max_completion_tokens: 100,
       temperature: 0.8,
     });
 
@@ -688,7 +688,7 @@ Just return the tweet content directly, no JSON formatting needed.`;
           content: `Generate a tweet from ${randomNPC.name} about or mentioning ${context.playerName || 'the artist'}.`
         }
       ],
-      max_tokens: 100,
+      max_completion_tokens: 100,
       temperature: 0.9,
     });
 
@@ -776,7 +776,7 @@ Response format should be a JSON object:
           content: `Generate a ${accountType.type} tweet about this artist.`
         }
       ],
-      max_tokens: 150,
+      max_completion_tokens: 150,
       temperature: 0.9,
     });
 

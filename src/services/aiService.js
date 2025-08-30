@@ -51,7 +51,7 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
             content: systemPrompt
           }
         ],
-        max_tokens: 150,
+        max_completion_tokens: 150,
         temperature: 0.8,
       });
 
@@ -241,7 +241,7 @@ Response format should be a JSON array:
             content: `Generate ${numberOfComments} realistic comments for this tweet.`
           }
         ],
-        max_tokens: 800,
+        max_completion_tokens: 800,
         temperature: 0.9,
       });
 
@@ -357,7 +357,7 @@ Write in third person, present tense. Make it feel like the opening of an engagi
             content: 'Generate the opening narrative for this AI roleplay event.'
           }
         ],
-        max_tokens: 300,
+        max_completion_tokens: 300,
         temperature: 0.8,
       });
 
@@ -425,7 +425,7 @@ Return as a JSON array of strings:
             content: 'Generate 3 response options for this situation.'
           }
         ],
-        max_tokens: 400,
+        max_completion_tokens: 400,
         temperature: 0.9,
       });
 
@@ -527,7 +527,7 @@ Return as JSON:
             content: 'Generate the AI response to the player\'s action.'
           }
         ],
-        max_tokens: 600,
+        max_completion_tokens: 600,
         temperature: 0.8,
       });
 
@@ -668,7 +668,7 @@ Return as JSON:
             content: 'Analyze this conversation and determine the relationship impact.'
           }
         ],
-        max_tokens: 800,
+        max_completion_tokens: 800,
         temperature: 0.3, // Lower temperature for more consistent analysis
       });
 
@@ -758,7 +758,7 @@ Generate 1-3 INDEPENDENT reaction tweets (not replies) as JSON array:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Generate realistic NPC reactions to this player tweet.' }
         ],
-        max_tokens: 200,
+        max_completion_tokens: 200,
         temperature: 0.8,
       });
 
@@ -803,7 +803,7 @@ Keep tweets under 280 characters, use minimal emojis, make them feel authentic.`
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Generate realistic event coverage tweets.' }
         ],
-        max_tokens: 300,
+        max_completion_tokens: 300,
         temperature: 0.9,
       });
 
