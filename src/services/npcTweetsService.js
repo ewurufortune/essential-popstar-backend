@@ -739,13 +739,22 @@ Artist's Current Career Status:
 - Next Project Hype: ${context.nextProjectHype || 'No upcoming projects announced'}
 - Followed NPCs: ${context.followedNPCs || 'None'}
 
-Generate both a fictional account and tweet content. Use minimal emojis (1-2 max) and NO hashtags. Make it remarkable and authentic to the ${accountType.type} personality.
-less than 100 characters.
+Generate both a fictional account and tweet content. The username should sound like a REAL PERSON'S account, not obviously music-related. Use patterns like:
+- Personal names + numbers: @jessica_m94, @alex_torres21, @samantha_k
+- Location + name: @mikeintoronto, @brooklyn_sarah, @la_native_jen  
+- Hobbies mixed: @coffee_and_books, @vintage_collector, @weekend_hiker
+- Random personal: @moonlight_dreamer, @city_walker, @quiet_observer
+- Subtle hints only: @melody_in_mind, @rhythm_walker (could be anyone who likes music)
+
+AVOID obvious terms like: music, chart, critic, stan, industry, artist, song, album, beats, lyrics, streaming, etc.
+
+Use minimal emojis (1-2 max) and NO hashtags. Make it remarkable and authentic to the ${accountType.type} personality.
+Less than 100 characters.
 Response format should be a JSON object:
 {
-  "username": "@ExampleAccount",
-  "name": "Account Display Name", 
-  "content": "The tweet content about this artist (be remarkable aand witty)",
+  "username": "@realistic_username_here",
+  "name": "Normal Person Name", 
+  "content": "The tweet content about this artist (be remarkable and witty)",
   "accountType": "${accountType.type}"
 }`;
 
