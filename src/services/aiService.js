@@ -52,7 +52,7 @@ ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the cu
           }
         ],
         max_completion_tokens: 150,
-        temperature: 0.8,
+        temperature: 1,
       });
 
       return completion.choices[0]?.message?.content?.trim() || 'Could not generate content.';
@@ -242,7 +242,7 @@ Response format should be a JSON array:
           }
         ],
         max_completion_tokens: 800,
-        temperature: 0.9,
+        temperature: 1,
       });
 
       const response = completion.choices[0]?.message?.content?.trim();
@@ -358,7 +358,7 @@ Write in third person, present tense. Make it feel like the opening of an engagi
           }
         ],
         max_completion_tokens: 300,
-        temperature: 0.8,
+        temperature: 1,
       });
 
       return completion.choices[0]?.message?.content?.trim() || 'The event begins as everyone gathers together...';
@@ -426,7 +426,7 @@ Return as a JSON array of strings:
           }
         ],
         max_completion_tokens: 400,
-        temperature: 0.9,
+        temperature: 1,
       });
 
       const response = completion.choices[0]?.message?.content?.trim();
@@ -528,7 +528,7 @@ Return as JSON:
           }
         ],
         max_completion_tokens: 600,
-        temperature: 0.8,
+        temperature: 1,
       });
 
       const response = completion.choices[0]?.message?.content?.trim();
@@ -804,7 +804,7 @@ Keep tweets under 280 characters, use minimal emojis, make them feel authentic.`
           { role: 'user', content: 'Generate realistic event coverage tweets.' }
         ],
         max_completion_tokens: 300,
-        temperature: 0.9,
+        temperature: 1,
       });
 
       const response = completion.choices[0]?.message?.content?.trim();

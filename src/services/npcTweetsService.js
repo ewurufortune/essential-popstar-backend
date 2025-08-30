@@ -620,7 +620,7 @@ Create a realistic ${account.topic} update that could actually be posted by this
         }
       ],
       max_completion_tokens: 100,
-      temperature: 0.8,
+      temperature: 1,
     });
 
     return completion.choices[0]?.message?.content?.trim();
@@ -689,7 +689,7 @@ Just return the tweet content directly, no JSON formatting needed.`;
         }
       ],
       max_completion_tokens: 100,
-      temperature: 0.9,
+      temperature: 1,
     });
 
     const tweetContent = completion.choices[0]?.message?.content?.trim();
@@ -777,7 +777,7 @@ Response format should be a JSON object:
         }
       ],
       max_completion_tokens: 150,
-      temperature: 0.9,
+      temperature: 1,
     });
 
     const response = completion.choices[0]?.message?.content?.trim();
