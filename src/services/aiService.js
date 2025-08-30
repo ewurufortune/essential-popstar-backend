@@ -44,7 +44,7 @@ Generate a realistic social media post that:
 ${userInput ? `User request: "${userInput}"` : 'Generate a post that fits the current situation.'}`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -215,7 +215,9 @@ Generate ${numberOfComments} diverse, realistic comments that people might leave
 4. Be under 100 characters each
 5. Include varied usernames and display names
 6. Some should mention the player if relevant
-${hasFollowedNPCs ? '7. 1-2 comments should be from the followed NPCs listed above, using their actual usernames and personality' : ''}
+7. Include some banter where comments react to each other (use @username to reference other commenters)
+8. Create conversational threads with back-and-forth exchanges
+${hasFollowedNPCs ? '9. 1-2 comments should be from the followed NPCs listed above, using their actual usernames and personality' : ''}
 
 Response format should be a JSON array:
 [
@@ -228,7 +230,7 @@ Response format should be a JSON array:
 ]`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -344,7 +346,7 @@ Create a vivid, immersive opening narrative (2-3 sentences) that:
 Write in third person, present tense. Make it feel like the opening of an engaging story.`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -412,7 +414,7 @@ Return as a JSON array of strings:
 ["Option 1", "Option 2", "Option 3"]`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -514,7 +516,7 @@ Return as JSON:
 }`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -655,7 +657,7 @@ Return as JSON:
 }`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -751,7 +753,7 @@ Generate 1-3 INDEPENDENT reaction tweets (not replies) as JSON array:
 [{"npcId": "npc_id", "content": "independent tweet referencing/reacting to the player's post"}]`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5-nano',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Generate realistic NPC reactions to this player tweet.' }
@@ -796,7 +798,7 @@ Generate as JSON array with realistic usernames and display names:
 Keep tweets under 280 characters, use minimal emojis, make them feel authentic.`;
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5-nano',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Generate realistic event coverage tweets.' }
@@ -806,7 +808,45 @@ Keep tweets under 280 characters, use minimal emojis, make them feel authentic.`
       });
 
       const response = completion.choices[0]?.message?.content?.trim();
-      return JSON.parse(response);
+      
+      let cleanedResponse = response;
+      
+      // Remove markdown code blocks if present
+      if (response.includes('```json')) {
+        const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          cleanedResponse = jsonMatch[1].trim();
+        }
+      } else if (response.includes('```')) {
+        // Handle generic code blocks
+        const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+        if (codeMatch) {
+          cleanedResponse = codeMatch[1].trim();
+        }
+      }
+      
+      console.log('Event Coverage - Original:', response.substring(0, 100));
+      console.log('Event Coverage - Cleaned:', cleanedResponse.substring(0, 100));
+      
+      try {
+        const coverage = JSON.parse(cleanedResponse);
+        return coverage;
+      } catch (parseError) {
+        console.error('Error parsing event coverage JSON:', parseError);
+        console.error('Raw coverage response:', response);
+        
+        // Return fallback coverage
+        return [
+          {
+            username: '@SportsUpdate',
+            name: 'Sports News',
+            content: 'Great event happening right now! 🏆',
+            profileImage: '/images/news-avatar.png',
+            isBlueCheck: false,
+            timestamp: new Date().toISOString()
+          }
+        ];
+      }
     } catch (error) {
       console.error('OpenAI API error for event coverage:', error);
       throw new Error('Failed to generate event coverage');

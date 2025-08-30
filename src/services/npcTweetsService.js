@@ -608,7 +608,7 @@ Generate a tweet about ${account.topic}. This should be completely unrelated to 
 Create a realistic ${account.topic} update that could actually be posted by this account today.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5-nano',
       messages: [
         {
           role: 'system',
@@ -677,7 +677,7 @@ Generate a tweet that either mentions the player directly, supports their work, 
 Just return the tweet content directly, no JSON formatting needed.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5-nano',
       messages: [
         {
           role: 'system',
@@ -765,7 +765,7 @@ Response format should be a JSON object:
 }`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5-nano',
       messages: [
         {
           role: 'system',
