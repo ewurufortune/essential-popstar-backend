@@ -173,7 +173,22 @@ router.post('/generate-event-narrative', authenticate, async (req, res) => {
     }
 
     // Generate the narrative
-    const narrative = await aiService.generateEventNarrative(event, attendeeNPCs, player, context);
+    // Get previous event memories for context
+    let eventMemories = [];
+    try {
+      const { data: memoriesData } = await require('../services/database').supabase
+        .from('ai_event_memories')
+        .select('event_title, attendee_names, outcome')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      eventMemories = memoriesData || [];
+    } catch (error) {
+      console.error('Error fetching event memories:', error);
+    }
+
+    const narrative = await aiService.generateEventNarrative(event, attendeeNPCs, player, context, eventMemories);
 
     // Deduct power after successful generation
     const newPowerAmount = await aiService.deductPowerForAI(userId, 1);

@@ -149,7 +149,7 @@ router.post('/generate-comment-replies', authenticate, async (req, res) => {
       });
     }
 
-    const result = await generatePlayerCommentReplies(playerComment, tweetContext, context);
+    const result = await generatePlayerCommentReplies(playerComment, tweetContext, context, userId);
 
     res.json(result);
   } catch (error) {

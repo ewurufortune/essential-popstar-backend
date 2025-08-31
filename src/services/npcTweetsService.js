@@ -984,14 +984,79 @@ Response format should be a JSON object:
  * @param {Object} context - Game context data
  * @returns {Object} Generation results
  */
-async function generatePlayerCommentReplies(playerComment, tweetContext, context) {
+async function generatePlayerCommentReplies(playerComment, tweetContext, context, userId = null) {
   try {
     const replies = [];
     
-    // Generate 1-2 reply comments
-    const replyCount = Math.floor(Math.random() * 2) + 1; // 1-2 replies
+    // Get followed NPCs from database if userId provided
+    let followedNPCs = [];
+    if (userId) {
+      try {
+        const { data: userData } = await require('./database').supabase
+          .from('app_users')
+          .select('followed_npc_ids')
+          .eq('id', userId)
+          .single();
+        
+        if (userData?.followed_npc_ids?.length > 0) {
+          const { data: npcsData } = await require('./database').supabase
+            .from('npc_profiles')
+            .select('*')
+            .in('id', userData.followed_npc_ids);
+          
+          followedNPCs = npcsData || [];
+        }
+      } catch (error) {
+        console.error('Error fetching followed NPCs for comment replies:', error);
+      }
+    }
     
-    for (let i = 0; i < replyCount; i++) {
+    // Generate 1-2 followed NPC replies + 1-2 random replies
+    const npcReplyCount = Math.min(followedNPCs.length, 2);
+    const randomReplyCount = Math.floor(Math.random() * 2) + 1;
+    
+    // Generate followed NPC replies first
+    for (let i = 0; i < npcReplyCount; i++) {
+      const npc = followedNPCs[i];
+      try {
+        const systemPrompt = `You are ${npc.name} (@${npc.username || npc.name.toLowerCase().replace(/\s+/g, '')}), responding to ${context.playerName}'s comment: "${playerComment}"
+
+Your bio: ${npc.twitter_bio || npc.description || 'Professional musician'}
+Your relationship with ${context.playerName}: ${npc.your_relationship || 'supportive colleague'}
+
+Generate a brief, authentic comment reply under 100 characters. Just return the comment text directly, no JSON.`;
+
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4.1-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Generate your reply comment.' }
+          ],
+          max_completion_tokens: 100,
+          temperature: 0.8,
+        });
+
+        const replyContent = completion.choices[0]?.message?.content?.trim();
+        
+        if (replyContent) {
+          replies.push({
+            id: `npc_reply_${npc.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            username: npc.username.startsWith('@') ? npc.username : `@${npc.username}`,
+            name: npc.name,
+            avatar: getRandomAvatarImage(),
+            content: replyContent,
+            timestamp: new Date().toISOString(),
+            isNPC: true,
+            profileImage: getRandomAvatarImage()
+          });
+        }
+      } catch (error) {
+        console.error(`Error generating NPC reply for ${npc.name}:`, error);
+      }
+    }
+    
+    // Generate random replies
+    for (let i = 0; i < randomReplyCount; i++) {
       try {
         const systemPrompt = `Generate a realistic Twitter comment reply to what ${context.playerName} just commented: "${playerComment}"
 

@@ -299,7 +299,7 @@ Response format should be a JSON array:
     }
   }
 
-  async generateEventNarrative(event, attendeeNPCs, player, context) {
+  async generateEventNarrative(event, attendeeNPCs, player, context, eventMemories = []) {
     if (!this.openai) {
       throw new Error('OpenAI not configured. AI features are disabled.');
     }
@@ -308,12 +308,20 @@ Response format should be a JSON array:
       const primaryNPC = attendeeNPCs[0];
       const otherNPCs = attendeeNPCs.slice(1);
 
+      // Build memory context if available
+      const memoryContext = eventMemories.length > 0 ? `
+PREVIOUS EVENT HISTORY:
+${eventMemories.map(memory => `- "${memory.event_title}" with ${memory.attendee_names?.join(', ') || 'various attendees'} - ${memory.outcome?.overallSuccess ? 'went well' : 'had mixed results'}`).join('\n')}
+
+Use this history to add continuity if relevant, but don't force references.` : '';
+
       const systemPrompt = `You are creating an immersive narrative opening for an AI roleplay event in the music industry simulation game "Essential Popstar".
 
 EVENT DETAILS:
 - Title: "${event.title}"
 - Description: "${event.description}"
 - Location Context: ${this.getLocationFromDescription(event.description)}
+${memoryContext}
 
 PLAYER CHARACTER:
 - Name: ${player.name}
