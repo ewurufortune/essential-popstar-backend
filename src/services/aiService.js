@@ -217,7 +217,8 @@ Generate ${numberOfComments} diverse, realistic comments that people might leave
 6. Some should mention the player if relevant
 7. Include some banter where comments react to each other (use @username to reference other commenters)
 8. Create conversational threads with back-and-forth exchanges
-${hasFollowedNPCs ? '9. 1-2 comments should be from the followed NPCs listed above, using their actual usernames and personality' : ''}
+9. IMPORTANT: The original poster (${tweet.author || 'Unknown'}) should NEVER respond or banter in the comments
+${hasFollowedNPCs ? '10. 1-2 comments should be from the followed NPCs listed above, using their actual usernames and personality' : ''}
 
 Response format should be a JSON array:
 [
@@ -739,56 +740,52 @@ Return as JSON:
         contextPlayerName: context.playerName
       });
 
-      if (!Array.isArray(followedNPCs) || followedNPCs.length === 0) {
-        console.log('🔥 No followed NPCs available for reactions');
-        return [];
-      }
-
       const reactions = [];
+      const { getRandomAvatarImage } = require('./npcTweetsService');
       
-      // Generate 1-2 reactions from random followed NPCs (simpler approach like working NPC tweets)
-      const reactionCount = Math.min(2, followedNPCs.length);
-      const shuffledNPCs = [...followedNPCs].sort(() => Math.random() - 0.5);
+      // Generate 2-3 reactions from AI-created accounts
+      const reactionCount = Math.floor(Math.random() * 2) + 2; // 2-3 reactions
       
       for (let i = 0; i < reactionCount; i++) {
-        const npc = shuffledNPCs[i];
-        
         try {
-          const systemPrompt = `You are ${npc.name} (@${npc.username || npc.name.toLowerCase().replace(/\s+/g, '')}), a ${npc.age_in_2024 || 'Unknown'} year old ${npc.genre || 'music'} artist from ${npc.country || 'Unknown'}.
+          const systemPrompt = `Generate a realistic Twitter reaction to this post: "${playerTweet.content}" by artist ${context.playerName}.
 
-Your bio: ${npc.twitter_bio || npc.description || 'Professional musician'}
-Your current feeling: ${npc.currently_feeling || 'creative and inspired'}
-Your relationship with ${context.playerName}: ${npc.your_relationship || 'supportive colleague'} (Score: ${npc.relationship_score || 50}/100)
+Create both a fictional Twitter account and their reaction tweet.
 
-${context.playerName} just posted: "${playerTweet.content}"
-
-Generate an independent tweet (not a reply) that references or reacts to what ${context.playerName} posted. Keep it under 100 characters, use minimal emojis (1-2 max), and stay authentic to your personality.
-
-Just return the tweet content directly, no JSON formatting needed.`;
+Return as JSON:
+{
+  "username": "@realistic_username",
+  "displayName": "Real Person Name",
+  "content": "reaction tweet content under 100 chars"
+}`;
 
           const completion = await this.openai.chat.completions.create({
             model: 'gpt-4.1-mini',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Generate a reaction tweet from ${npc.name} about ${context.playerName}'s post.` }
+              { role: 'user', content: `Generate reaction tweet #${i + 1}` }
             ],
-            max_completion_tokens: 100,
+            max_completion_tokens: 150,
             temperature: 0.8,
           });
 
-          const tweetContent = completion.choices[0]?.message?.content?.trim();
+          const response = completion.choices[0]?.message?.content?.trim();
           
-          if (tweetContent) {
-            console.log(`🔥 Generated reaction from ${npc.name}:`, tweetContent);
+          try {
+            const reactionData = JSON.parse(response);
+            console.log(`🔥 Generated reaction #${i + 1}:`, reactionData);
             reactions.push({
-              npcId: npc.name,
-              content: tweetContent,
-              npcName: npc.name,
-              npcUsername: npc.username || `@${npc.name.toLowerCase().replace(/\s+/g, '')}`
+              npcId: `reaction_${i}`,
+              content: reactionData.content,
+              npcName: reactionData.displayName,
+              npcUsername: reactionData.username,
+              profileImage: getRandomAvatarImage()
             });
+          } catch (parseError) {
+            console.error(`🔥 JSON parse error for reaction #${i + 1}:`, parseError, response);
           }
         } catch (error) {
-          console.error(`🔥 Error generating reaction for ${npc.name}:`, error);
+          console.error(`🔥 Error generating reaction #${i + 1}:`, error);
         }
       }
       

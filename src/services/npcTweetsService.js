@@ -10,6 +10,36 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Generate realistic engagement metrics for tweets
+const generateEngagementMetrics = (accountType) => {
+  // Different account types have different engagement patterns
+  const engagementRanges = {
+    // High-profile accounts
+    'espn': { likes: [5000, 50000], retweets: [500, 5000], comments: [100, 1000] },
+    'formula1': { likes: [3000, 30000], retweets: [300, 3000], comments: [50, 500] },
+    'chartdata': { likes: [2000, 20000], retweets: [200, 2000], comments: [30, 300] },
+    
+    // Medium-profile accounts  
+    'techcunch': { likes: [1000, 10000], retweets: [100, 1000], comments: [20, 200] },
+    'voguemagazine': { likes: [800, 8000], retweets: [80, 800], comments: [15, 150] },
+    
+    // Lower-profile but active accounts
+    'naval': { likes: [500, 5000], retweets: [50, 500], comments: [10, 100] },
+    'hubermanlab': { likes: [400, 4000], retweets: [40, 400], comments: [8, 80] },
+    
+    // Default for player-focused accounts
+    'default': { likes: [50, 500], retweets: [5, 50], comments: [2, 20] }
+  };
+  
+  const range = engagementRanges[accountType] || engagementRanges['default'];
+  
+  return {
+    likes: Math.floor(Math.random() * (range.likes[1] - range.likes[0]) + range.likes[0]),
+    retweets: Math.floor(Math.random() * (range.retweets[1] - range.retweets[0]) + range.retweets[0]),
+    comments: Math.floor(Math.random() * (range.comments[1] - range.comments[0]) + range.comments[0])
+  };
+};
+
 // Get random aesthetic images for NPC avatars from expanded collection
 const getRandomAvatarImage = (baseUrl = process.env.BACKEND_URL || 'https://essential-popstar-backend-production.up.railway.app') => {
   const avatarCategories = [
@@ -507,6 +537,7 @@ async function generateNPCTweets(context, numberOfTweets = 7) {
       try {
         const tweet = await generateTweetForPredefinedAccount(account);
         if (tweet) {
+          const engagementMetrics = generateEngagementMetrics(account.id);
           tweets.push({
             id: `npc_${account.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             username: account.username,
@@ -516,7 +547,10 @@ async function generateNPCTweets(context, numberOfTweets = 7) {
             timestamp: new Date().toISOString(),
             isNPC: true,
             accountType: account.id,
-            topic: account.topic
+            topic: account.topic,
+            likes: engagementMetrics.likes,
+            retweets: engagementMetrics.retweets,
+            comments: engagementMetrics.comments
           });
         }
       } catch (error) {
@@ -699,6 +733,7 @@ Just return the tweet content directly, no JSON formatting needed.`;
       return null;
     }
     
+    const engagementMetrics = generateEngagementMetrics('followed_npc');
     const tweetObject = {
       id: `followed_${randomNPC.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       username: randomNPC.username.startsWith('@') ? randomNPC.username : `@${randomNPC.username}`,
@@ -708,7 +743,10 @@ Just return the tweet content directly, no JSON formatting needed.`;
       timestamp: new Date().toISOString(),
       isNPC: true,
       accountType: 'followed_npc',
-      topic: `followed-npc-${randomNPC.genre.toLowerCase()}`
+      topic: `followed-npc-${randomNPC.genre.toLowerCase()}`,
+      likes: engagementMetrics.likes,
+      retweets: engagementMetrics.retweets,
+      comments: engagementMetrics.comments
     };
     
     console.log('[FOLLOWED TWEETS] Generated tweet object:', tweetObject.username, '->', tweetObject.content);
@@ -784,6 +822,7 @@ Response format should be a JSON object:
     
     try {
       const tweetData = JSON.parse(response);
+      const engagementMetrics = generateEngagementMetrics(accountType.type);
       
       return {
         id: `player_focused_${accountType.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -794,7 +833,10 @@ Response format should be a JSON object:
         timestamp: new Date().toISOString(),
         isNPC: true,
         accountType: accountType.type,
-        topic: `player-focused-${accountType.type}`
+        topic: `player-focused-${accountType.type}`,
+        likes: engagementMetrics.likes,
+        retweets: engagementMetrics.retweets,
+        comments: engagementMetrics.comments
       };
     } catch (parseError) {
       console.error('Error parsing player-focused tweet JSON:', parseError);
@@ -864,5 +906,6 @@ module.exports = {
   generateNPCTweets,
   generateAndStoreNPCTweets,
   getPredefinedAccounts,
-  PLAYER_FOCUSED_ACCOUNT_TYPES
+  PLAYER_FOCUSED_ACCOUNT_TYPES,
+  getRandomAvatarImage
 };

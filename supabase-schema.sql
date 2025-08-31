@@ -62,6 +62,19 @@ CREATE TABLE referral_claims (
   CHECK (referrer_id != referred_id) -- prevent self-referral
 );
 
+-- AI Event Memories for future event context
+CREATE TABLE ai_event_memories (
+  id BIGSERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES app_users(id),
+  event_id TEXT NOT NULL,
+  event_title TEXT NOT NULL,
+  event_description TEXT,
+  attendee_names TEXT[],
+  conversation_summary JSONB,
+  outcome JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Referral rewards tracking (integrated with app_users)
 CREATE TABLE referral_rewards (
   id BIGSERIAL PRIMARY KEY,
@@ -101,6 +114,7 @@ ALTER TABLE power_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referral_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referral_claims ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referral_rewards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_event_memories ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for app_users (unified system)
 CREATE POLICY "Users can view their own record" ON app_users
@@ -156,6 +170,13 @@ CREATE POLICY "Users can read referral rewards" ON referral_rewards
 
 CREATE POLICY "System can create referral rewards" ON referral_rewards
   FOR INSERT WITH CHECK (true); -- Allow API to issue rewards
+
+-- Create policies for ai_event_memories
+CREATE POLICY "Users can read their own event memories" ON ai_event_memories
+  FOR SELECT USING (true); -- Allow API to read memories
+
+CREATE POLICY "Users can create their own event memories" ON ai_event_memories
+  FOR INSERT WITH CHECK (true); -- Allow API to create memories
 
 -- Helper functions for referral system and experience system
 

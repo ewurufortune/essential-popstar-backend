@@ -429,6 +429,38 @@ router.post('/generate-event-coverage', authenticate, async (req, res) => {
   }
 });
 
+// Save event memory for future AI events
+router.post('/save-event-memory', authenticate, async (req, res) => {
+  try {
+    const eventMemory = req.body;
+    const userId = req.user.id;
+    
+    // Store event memory in database
+    const { data, error } = await require('../services/database').supabase
+      .from('ai_event_memories')
+      .insert({
+        user_id: userId,
+        event_id: eventMemory.eventId,
+        event_title: eventMemory.eventTitle,
+        event_description: eventMemory.eventDescription,
+        attendee_names: eventMemory.attendeeNames,
+        conversation_summary: eventMemory.conversationSummary,
+        outcome: eventMemory.outcome,
+        created_at: eventMemory.timestamp
+      });
+    
+    if (error) {
+      console.error('Error saving event memory:', error);
+      return res.status(500).json({ error: 'Failed to save event memory' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving event memory:', error);
+    res.status(500).json({ error: 'Failed to save event memory' });
+  }
+});
+
 // Health check for AI service
 router.get('/health', (req, res) => {
   res.json({
