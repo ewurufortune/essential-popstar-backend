@@ -116,14 +116,21 @@ router.post('/generate-comments', authenticate, async (req, res) => {
 
     // Generate 8 comments for the tweet
     const comments = await aiService.generateCommentsForTweet(tweet, context);
+    
+    // Add avatars to comments using the same pattern as other AI systems
+    const { getRandomAvatarImage } = require('../services/npcTweetsService');
+    const commentsWithAvatars = comments.map(comment => ({
+      ...comment,
+      profileImage: getRandomAvatarImage()
+    }));
 
     // Deduct power after successful generation
     const newPowerAmount = await aiService.deductPowerForAI(userId, 1);
 
     res.json({
       success: true,
-      comments: comments,
-      count: comments.length,
+      comments: commentsWithAvatars,
+      count: commentsWithAvatars.length,
       currentPower: newPowerAmount
     });
 
