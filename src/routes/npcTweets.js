@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { generateAndStoreNPCTweets, getPredefinedAccounts, PLAYER_FOCUSED_ACCOUNT_TYPES } = require('../services/npcTweetsService');
+const { generateAndStoreNPCTweets, getPredefinedAccounts, PLAYER_FOCUSED_ACCOUNT_TYPES, generatePlayerTweetReactions } = require('../services/npcTweetsService');
 const aiService = require('../services/aiService');
 const { authenticate } = require('../middleware/auth');
 
@@ -83,6 +83,52 @@ router.get('/accounts', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch NPC accounts'
+    });
+  }
+});
+
+/**
+ * Generate reactions to player tweets
+ * POST /api/npc-tweets/generate-reactions
+ */
+router.post('/generate-reactions', authenticate, async (req, res) => {
+  try {
+    const { playerTweet, context } = req.body;
+    const userId = req.user.id;
+
+    if (!playerTweet || !context) {
+      return res.status(400).json({
+        success: false,
+        error: 'Player tweet and context are required'
+      });
+    }
+
+    // Check if user has enough power for AI generation (1 power required)
+    const powerCheck = await aiService.checkPowerForAI(userId);
+    if (!powerCheck.hasEnoughPower) {
+      return res.status(400).json({
+        success: false,
+        error: 'Insufficient power for AI generation',
+        currentPower: powerCheck.currentPower,
+        requiredPower: powerCheck.requiredPower
+      });
+    }
+
+    // Deduct power before generating reactions
+    await aiService.deductPowerForAI(userId, 1);
+
+    const result = await generatePlayerTweetReactions(playerTweet, context);
+
+    res.json({
+      ...result,
+      powerDeducted: 1,
+      remainingPower: powerCheck.currentPower - 1
+    });
+  } catch (error) {
+    console.error('Error generating tweet reactions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate tweet reactions'
     });
   }
 });

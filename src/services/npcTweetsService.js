@@ -873,6 +873,111 @@ Response format should be a JSON object:
 // Removed getRandomAccounts function - no longer needed with new implementation
 
 /**
+ * Generate reactions to player tweets
+ * @param {Object} playerTweet - Player's tweet
+ * @param {Object} context - Game context data
+ * @returns {Object} Generation results
+ */
+async function generatePlayerTweetReactions(playerTweet, context) {
+  try {
+    const reactions = [];
+    
+    // Generate 2-3 reaction tweets like NPC tweets
+    const reactionCount = Math.floor(Math.random() * 2) + 2; // 2-3 reactions
+    
+    for (let i = 0; i < reactionCount; i++) {
+      try {
+        const accountType = PLAYER_FOCUSED_ACCOUNT_TYPES[Math.floor(Math.random() * PLAYER_FOCUSED_ACCOUNT_TYPES.length)];
+        const reactionTweet = await generateReactionTweet(accountType, playerTweet, context);
+        if (reactionTweet) {
+          reactions.push(reactionTweet);
+        }
+      } catch (error) {
+        console.error('Error generating reaction tweet:', error);
+      }
+    }
+    
+    return {
+      success: true,
+      tweets: reactions,
+      generated: reactions.length
+    };
+  } catch (error) {
+    console.error('Error generating player tweet reactions:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a single reaction tweet
+ * @param {Object} accountType - Account type configuration
+ * @param {Object} playerTweet - Player's tweet to react to
+ * @param {Object} context - Game context data
+ * @returns {Object} Generated reaction tweet
+ */
+async function generateReactionTweet(accountType, playerTweet, context) {
+  try {
+    const systemPrompt = `Create a reaction tweet to what ${context.playerName} just posted: "${playerTweet.content}"
+
+Account Type: ${accountType.type}
+Personality: ${accountType.personality}
+
+Generate both a fictional account and their reaction tweet. Make it feel authentic to the ${accountType.type} personality.
+
+Response format should be a JSON object:
+{
+  "username": "@realistic_username_here",
+  "name": "Normal Person Name", 
+  "content": "reaction tweet under 100 characters"
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4.1-mini',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: `Generate a ${accountType.type} reaction to this tweet.`
+        }
+      ],
+      max_completion_tokens: 150,
+      temperature: 1,
+    });
+
+    const response = completion.choices[0]?.message?.content?.trim();
+    
+    try {
+      const tweetData = JSON.parse(response);
+      const engagementMetrics = generateEngagementMetrics(accountType.type);
+      
+      return {
+        id: `reaction_${accountType.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        username: tweetData.username,
+        name: tweetData.name,
+        avatar: getRandomAvatarImage(),
+        content: tweetData.content,
+        timestamp: new Date().toISOString(),
+        isNPC: true,
+        accountType: `reaction_${accountType.type}`,
+        topic: `player-reaction-${accountType.type}`,
+        likes: engagementMetrics.likes,
+        retweets: engagementMetrics.retweets,
+        comments: engagementMetrics.comments
+      };
+    } catch (parseError) {
+      console.error('Error parsing reaction tweet JSON:', parseError);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error generating reaction tweet:', error);
+    return null;
+  }
+}
+
+/**
  * Generate and store NPC tweets for a user
  * @param {string} userId - User ID
  * @param {Object} context - Game context data
@@ -905,6 +1010,7 @@ async function generateAndStoreNPCTweets(userId, context) {
 module.exports = {
   generateNPCTweets,
   generateAndStoreNPCTweets,
+  generatePlayerTweetReactions,
   getPredefinedAccounts,
   PLAYER_FOCUSED_ACCOUNT_TYPES,
   getRandomAvatarImage
