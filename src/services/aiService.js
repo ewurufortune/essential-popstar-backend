@@ -733,83 +733,69 @@ Return as JSON:
     }
 
     try {
-      // Create detailed NPC profiles with full context like other AI tweet generation
-      const npcProfiles = Array.isArray(followedNPCs) ? followedNPCs.map(npc => {
-        return `- ${npc.name} (@${npc.username || npc.name.toLowerCase().replace(/\s+/g, '')}): ${npc.age_in_2024 || 'Unknown'} year old ${npc.genre || 'music'} artist from ${npc.country || 'Unknown'}
-  Bio: ${npc.twitter_bio || npc.description || 'Professional musician'}
-  Current Feeling: ${npc.currently_feeling || 'creative and inspired'}
-  Relationship with Player: ${npc.your_relationship || 'supportive colleague'} (Score: ${npc.relationship_score || 50}/100)
-  Personality: ${npc.personality || 'Professional and supportive'}`;
-      }).join('\n\n') : 'No followed NPCs available';
-
-      const systemPrompt = `Generate 1-3 independent Twitter posts from NPCs reacting to what the player just tweeted. These are NOT direct replies or comments, but separate tweets that reference or react to the player's post.
-
-IMPORTANT: Generate INDEPENDENT TWEETS that reference the player, not direct replies or comments.
-
-Player Details:
-- Name: ${context.playerName || 'Unknown Artist'}
-- Handle: @${context.playerName ? context.playerName.toLowerCase().replace(/\s+/g, '') : 'artist'}
-- Tweet Content: "${playerTweet.content}"
-- Current Status: ${context.reach || 'Rising artist'}
-- Recent Work: ${context.lastReleasedSingle || 'No recent releases'}
-
-Followed NPCs and Their Full Context:
-${npcProfiles}
-
-Generate 1-3 INDEPENDENT reaction tweets that:
-1. Use the NPC's actual personality and voice from their bio
-2. Reference their relationship dynamic with the player
-3. Stay authentic to their genre and country background
-4. Feel natural and not forced
-5. Show their current emotional state
-6. Use minimal emojis (1-2 max) and authentic language
-7. Keep under 100 characters
-
-Return as JSON array with exact NPC names:
-[{"npcId": "Exact NPC Name from list above", "content": "independent tweet referencing/reacting to the player's post"}]
-
-Make sure reactions feel authentic to each NPC's established personality and relationship with the player.`;
-
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4.1-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'Generate realistic NPC reactions to this player tweet using their full personalities and context.' }
-        ],
-        max_completion_tokens: 300,
-        temperature: 0.8,
+      console.log('🔥 generatePlayerTweetReactions called with:', {
+        playerTweetContent: playerTweet.content,
+        followedNPCsCount: Array.isArray(followedNPCs) ? followedNPCs.length : 0,
+        contextPlayerName: context.playerName
       });
 
-      const response = completion.choices[0]?.message?.content?.trim();
-      
-      try {
-        // Clean the response to extract JSON from markdown formatting
-        let cleanedResponse = response;
-        
-        if (response.includes('```json')) {
-          const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
-          if (jsonMatch) {
-            cleanedResponse = jsonMatch[1].trim();
-          }
-        } else if (response.includes('```')) {
-          const codeMatch = response.match(/```\s*([\s\S]*?)\s*```/);
-          if (codeMatch) {
-            cleanedResponse = codeMatch[1].trim();
-          }
-        }
-        
-        console.log('Player Tweet Reactions - Original:', response.substring(0, 100));
-        console.log('Player Tweet Reactions - Cleaned:', cleanedResponse.substring(0, 100));
-        
-        const reactions = JSON.parse(cleanedResponse);
-        return Array.isArray(reactions) ? reactions : [];
-      } catch (parseError) {
-        console.error('Error parsing player tweet reactions JSON:', parseError);
-        console.error('Raw reactions response:', response);
+      if (!Array.isArray(followedNPCs) || followedNPCs.length === 0) {
+        console.log('🔥 No followed NPCs available for reactions');
         return [];
       }
+
+      const reactions = [];
+      
+      // Generate 1-2 reactions from random followed NPCs (simpler approach like working NPC tweets)
+      const reactionCount = Math.min(2, followedNPCs.length);
+      const shuffledNPCs = [...followedNPCs].sort(() => Math.random() - 0.5);
+      
+      for (let i = 0; i < reactionCount; i++) {
+        const npc = shuffledNPCs[i];
+        
+        try {
+          const systemPrompt = `You are ${npc.name} (@${npc.username || npc.name.toLowerCase().replace(/\s+/g, '')}), a ${npc.age_in_2024 || 'Unknown'} year old ${npc.genre || 'music'} artist from ${npc.country || 'Unknown'}.
+
+Your bio: ${npc.twitter_bio || npc.description || 'Professional musician'}
+Your current feeling: ${npc.currently_feeling || 'creative and inspired'}
+Your relationship with ${context.playerName}: ${npc.your_relationship || 'supportive colleague'} (Score: ${npc.relationship_score || 50}/100)
+
+${context.playerName} just posted: "${playerTweet.content}"
+
+Generate an independent tweet (not a reply) that references or reacts to what ${context.playerName} posted. Keep it under 100 characters, use minimal emojis (1-2 max), and stay authentic to your personality.
+
+Just return the tweet content directly, no JSON formatting needed.`;
+
+          const completion = await this.openai.chat.completions.create({
+            model: 'gpt-4.1-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Generate a reaction tweet from ${npc.name} about ${context.playerName}'s post.` }
+            ],
+            max_completion_tokens: 100,
+            temperature: 0.8,
+          });
+
+          const tweetContent = completion.choices[0]?.message?.content?.trim();
+          
+          if (tweetContent) {
+            console.log(`🔥 Generated reaction from ${npc.name}:`, tweetContent);
+            reactions.push({
+              npcId: npc.name,
+              content: tweetContent,
+              npcName: npc.name,
+              npcUsername: npc.username || `@${npc.name.toLowerCase().replace(/\s+/g, '')}`
+            });
+          }
+        } catch (error) {
+          console.error(`🔥 Error generating reaction for ${npc.name}:`, error);
+        }
+      }
+      
+      console.log(`🔥 Returning ${reactions.length} reactions`);
+      return reactions;
     } catch (error) {
-      console.error('OpenAI API error for player tweet reactions:', error);
+      console.error('🔥 OpenAI API error for player tweet reactions:', error);
       throw new Error('Failed to generate player tweet reactions');
     }
   }
