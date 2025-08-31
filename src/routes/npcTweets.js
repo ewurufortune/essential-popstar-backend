@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { generateAndStoreNPCTweets, getPredefinedAccounts, PLAYER_FOCUSED_ACCOUNT_TYPES, generatePlayerTweetReactions } = require('../services/npcTweetsService');
+const { generateAndStoreNPCTweets, getPredefinedAccounts, PLAYER_FOCUSED_ACCOUNT_TYPES, generatePlayerTweetReactions, generatePlayerCommentReplies } = require('../services/npcTweetsService');
 const aiService = require('../services/aiService');
 const { authenticate } = require('../middleware/auth');
 
@@ -129,6 +129,34 @@ router.post('/generate-reactions', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to generate tweet reactions'
+    });
+  }
+});
+
+/**
+ * Generate comment replies to player comments
+ * POST /api/npc-tweets/generate-comment-replies
+ */
+router.post('/generate-comment-replies', authenticate, async (req, res) => {
+  try {
+    const { playerComment, tweetContext, context } = req.body;
+    const userId = req.user.id;
+
+    if (!playerComment || !context) {
+      return res.status(400).json({
+        success: false,
+        error: 'Player comment and context are required'
+      });
+    }
+
+    const result = await generatePlayerCommentReplies(playerComment, tweetContext, context);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error generating comment replies:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate comment replies'
     });
   }
 });

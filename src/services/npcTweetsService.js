@@ -978,6 +978,86 @@ Response format should be a JSON object:
 }
 
 /**
+ * Generate comment replies to player comments
+ * @param {string} playerComment - Player's comment
+ * @param {Object} tweetContext - Original tweet context
+ * @param {Object} context - Game context data
+ * @returns {Object} Generation results
+ */
+async function generatePlayerCommentReplies(playerComment, tweetContext, context) {
+  try {
+    const replies = [];
+    
+    // Generate 1-2 reply comments
+    const replyCount = Math.floor(Math.random() * 2) + 1; // 1-2 replies
+    
+    for (let i = 0; i < replyCount; i++) {
+      try {
+        const systemPrompt = `Generate a realistic Twitter comment reply to what ${context.playerName} just commented: "${playerComment}"
+
+Original tweet context: "${tweetContext?.content || 'Unknown tweet'}"
+
+Create a fictional account that replies to the player's comment. Make it feel authentic.
+
+Response format should be a JSON object:
+{
+  "username": "@realistic_username",
+  "name": "Real Person Name", 
+  "content": "reply comment under 100 characters"
+}`;
+
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4.1-mini',
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt
+            },
+            {
+              role: 'user',
+              content: 'Generate a comment reply.'
+            }
+          ],
+          max_completion_tokens: 150,
+          temperature: 1,
+        });
+
+        const response = completion.choices[0]?.message?.content?.trim();
+        
+        try {
+          const replyData = JSON.parse(response);
+          const engagementMetrics = generateEngagementMetrics('default');
+          
+          replies.push({
+            id: `comment_reply_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            username: replyData.username,
+            name: replyData.name,
+            avatar: getRandomAvatarImage(),
+            content: replyData.content,
+            timestamp: new Date().toISOString(),
+            isNPC: true,
+            profileImage: getRandomAvatarImage()
+          });
+        } catch (parseError) {
+          console.error('Error parsing comment reply JSON:', parseError);
+        }
+      } catch (error) {
+        console.error('Error generating comment reply:', error);
+      }
+    }
+    
+    return {
+      success: true,
+      comments: replies,
+      generated: replies.length
+    };
+  } catch (error) {
+    console.error('Error generating player comment replies:', error);
+    throw error;
+  }
+}
+
+/**
  * Generate and store NPC tweets for a user
  * @param {string} userId - User ID
  * @param {Object} context - Game context data
@@ -1011,6 +1091,7 @@ module.exports = {
   generateNPCTweets,
   generateAndStoreNPCTweets,
   generatePlayerTweetReactions,
+  generatePlayerCommentReplies,
   getPredefinedAccounts,
   PLAYER_FOCUSED_ACCOUNT_TYPES,
   getRandomAvatarImage
