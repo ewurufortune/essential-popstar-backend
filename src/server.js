@@ -12,6 +12,7 @@ const referralRoutes = require('./routes/referrals');
 const aiRoutes = require('./routes/ai');
 const npcTweetsRoutes = require('./routes/npcTweets');
 const followsRoutes = require('./routes/follows');
+const purchaseRoutes = require('./routes/purchases');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,6 +56,7 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/npc-tweets', npcTweetsRoutes);
 app.use('/api/follows', followsRoutes);
+app.use('/api/purchases', purchaseRoutes);
 
 // Serve static files for NPC avatars with cache headers
 app.use('/assets', express.static('assets', {

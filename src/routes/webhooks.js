@@ -29,23 +29,29 @@ router.post('/revenuecat', express.raw({ type: 'application/json' }), async (req
       return res.status(400).json({ error: 'Invalid JSON payload' });
     }
 
-    console.log('RevenueCat webhook received:', {
+    console.log('🔔 RevenueCat webhook received:', {
       type: event.event?.type,
       appUserId: event.event?.app_user_id,
-      productId: event.event?.product_id
+      productId: event.event?.product_id,
+      transactionId: event.event?.transaction_id,
+      id: event.event?.id
     });
 
     // Handle purchase events
     const purchaseData = extractPurchaseData(event);
     if (purchaseData) {
+      console.log('💰 Processing purchase event:', purchaseData);
       await handlePurchaseEvent(purchaseData);
+      console.log('✅ Purchase processing completed');
       return res.status(200).json({ success: true, message: 'Purchase processed' });
     }
 
     // Handle refund events
     const refundData = extractRefundData(event);
     if (refundData) {
+      console.log('💸 Processing refund event:', refundData);
       await handleRefundEvent(refundData);
+      console.log('✅ Refund processing completed');
       return res.status(200).json({ success: true, message: 'Refund processed' });
     }
 
