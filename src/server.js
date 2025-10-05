@@ -54,7 +54,8 @@ app.use((req, res, next) => {
 });
 
 // Body parsing middleware (except for webhooks)
-app.use('/webhooks', webhookRoutes); // Webhooks handle their own body parsing
+// Mount webhooks at /api/webhooks to match client calls
+app.use('/api/webhooks', webhookRoutes); // Webhooks handle their own body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
