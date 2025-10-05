@@ -23,27 +23,37 @@ router.post('/revenuecat', express.raw({ type: 'application/json' }), async (req
       payloadPreview: payload.substring(0, 100)
     });
 
-    // Check if secret is configured
-    if (!secret) {
-      console.error('❌ REVENUECAT_WEBHOOK_SECRET not configured in environment!');
-      return res.status(500).json({ error: 'Webhook secret not configured' });
-    }
-
-    // Verify signature
-    if (!verifyRevenueCatSignature(payload, signature, secret)) {
-      console.error('❌ Invalid webhook signature');
-      return res.status(401).json({ error: 'Invalid signature' });
-    }
-    
-    console.log('✅ Webhook signature verified');
-
-    // Parse the event
+    // Parse the event first to check environment
     let event;
     try {
       event = JSON.parse(payload);
     } catch (parseError) {
       console.error('Failed to parse webhook payload:', parseError);
       return res.status(400).json({ error: 'Invalid JSON payload' });
+    }
+
+    const isSandbox = event.event?.environment === 'SANDBOX';
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+
+    console.log('Environment check:', {
+      isSandbox,
+      isDevelopment,
+      environment: event.event?.environment
+    });
+
+    // Verify signature (skip for sandbox/development if signature is missing)
+    if (signature && secret) {
+      if (!verifyRevenueCatSignature(payload, signature, secret)) {
+        console.error('❌ Invalid webhook signature');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+      console.log('✅ Webhook signature verified');
+    } else if (!isSandbox && !isDevelopment) {
+      // In production with real purchases, signature is required
+      console.error('❌ Missing signature in production environment');
+      return res.status(401).json({ error: 'Signature required' });
+    } else {
+      console.log('⚠️  Skipping signature verification (sandbox/development mode)');
     }
 
     console.log('🔔 RevenueCat webhook received:', {
