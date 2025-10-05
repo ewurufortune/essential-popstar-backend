@@ -37,16 +37,26 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Request logging middleware (BEFORE routes so we see ALL requests including webhooks)
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (req.path.includes('/webhook')) {
+    console.log('🔔 Webhook request received:', {
+      path: req.path,
+      method: req.method,
+      headers: {
+        'content-type': req.get('content-type'),
+        'x-revenuecat-signature': req.get('x-revenuecat-signature') ? 'present' : 'missing'
+      }
+    });
+  }
+  next();
+});
+
 // Body parsing middleware (except for webhooks)
 app.use('/webhooks', webhookRoutes); // Webhooks handle their own body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
 
 // API routes
 app.use('/api', powerRoutes);

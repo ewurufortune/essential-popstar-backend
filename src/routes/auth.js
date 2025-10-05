@@ -63,6 +63,62 @@ router.post('/apple', async (req, res) => {
 });
 
 /**
+ * POST /api/auth/google
+ * Handle Google Sign In user sync
+ */
+router.post('/google', async (req, res) => {
+  try {
+    const { user_id, email, name, picture, id_token } = req.body;
+
+    if (!user_id || !id_token) {
+      return res.status(400).json({ 
+        error: 'user_id and id_token are required' 
+      });
+    }
+
+    console.log(`🔵 Google auth sync for user: ${user_id}`);
+
+    // TODO: Verify Google ID token here in production
+    // For now, we'll trust the client-side verification
+    
+    // Create or get user
+    const user = await db.getOrCreateUser(user_id);
+    
+    // Optionally update user profile with Google data
+    if (name || picture) {
+      try {
+        await db.supabase
+          .from('app_users')
+          .update({
+            name: name || user.name,
+            avatar_url: picture || user.avatar_url,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user_id);
+      } catch (updateError) {
+        console.warn('Failed to update user profile:', updateError);
+        // Don't fail the auth if profile update fails
+      }
+    }
+
+    console.log(`✅ Google user synced: ${user.id}`);
+
+    res.json({
+      success: true,
+      message: 'Google user synced successfully',
+      user_id: user.id
+    });
+
+  } catch (error) {
+    console.error('Google auth sync error:', error);
+    res.status(500).json({
+      error: 'Failed to sync Google user',
+      details: error.message
+    });
+  }
+});
+
+/**
  * POST /api/auth/add-experience
  * Add experience to player and update level
  */

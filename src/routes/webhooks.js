@@ -9,16 +9,33 @@ const { getProductPowerDelta } = require('../utils/powerCalculator');
  * Handle RevenueCat webhook events
  */
 router.post('/revenuecat', express.raw({ type: 'application/json' }), async (req, res) => {
+  console.log('🔔 RevenueCat webhook endpoint hit!');
+  
   try {
     const signature = req.get('X-RevenueCat-Signature');
     const payload = req.body.toString();
     const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
 
+    console.log('Webhook details:', {
+      hasSignature: !!signature,
+      hasSecret: !!secret,
+      payloadLength: payload.length,
+      payloadPreview: payload.substring(0, 100)
+    });
+
+    // Check if secret is configured
+    if (!secret) {
+      console.error('❌ REVENUECAT_WEBHOOK_SECRET not configured in environment!');
+      return res.status(500).json({ error: 'Webhook secret not configured' });
+    }
+
     // Verify signature
     if (!verifyRevenueCatSignature(payload, signature, secret)) {
-      console.error('Invalid webhook signature');
+      console.error('❌ Invalid webhook signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }
+    
+    console.log('✅ Webhook signature verified');
 
     // Parse the event
     let event;
