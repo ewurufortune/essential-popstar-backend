@@ -68,6 +68,12 @@ router.post('/verify', async (req, res) => {
   try {
     const { transactionId, productIdentifier, appUserId } = req.body;
 
+    console.log('🔍 Purchase verification request:', {
+      transactionId,
+      appUserId,
+      productIdentifier
+    });
+
     if (!transactionId || !appUserId) {
       return res.status(400).json({ 
         success: false, 
@@ -80,6 +86,12 @@ router.post('/verify', async (req, res) => {
     
     // Get recent power history to find this transaction
     const powerHistory = await database.getPowerHistory(appUserId, 20);
+    
+    console.log('📜 Power history for user:', {
+      userId: appUserId,
+      historyCount: powerHistory.length,
+      transactionIds: powerHistory.map(h => h.external_txn_id || h.idempotency_key)
+    });
 
     // Look for the transaction
     const transaction = powerHistory.find(entry => 
