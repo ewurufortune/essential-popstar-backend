@@ -64,73 +64,35 @@ router.post('/apple', async (req, res) => {
 
 /**
  * POST /api/auth/google
- * Handle Google Sign In user sync with token verification
+ * Handle Google Sign In user sync
  */
 router.post('/google', async (req, res) => {
   try {
-    const { token, user_id, email, name, picture } = req.body;
+    const { user_id, email, name, picture, access_token } = req.body;
 
-    if (!token) {
+    if (!user_id) {
       return res.status(400).json({ 
-        error: 'token is required' 
+        error: 'user_id is required' 
       });
     }
 
-    console.log(`🔵 Google auth sync - verifying token...`);
-
-    // Verify Google ID token
-    const { OAuth2Client } = require('google-auth-library');
-    const client = new OAuth2Client('839579963723-o0sle8gaioi6ok7toarpbm7sm2gj9os0.apps.googleusercontent.com');
-    
-    let verifiedUserId;
-    let verifiedEmail;
-    
-    try {
-      const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: '839579963723-o0sle8gaioi6ok7toarpbm7sm2gj9os0.apps.googleusercontent.com',
-      });
-      
-      const payload = ticket.getPayload();
-      verifiedUserId = payload['sub']; // Google user ID
-      verifiedEmail = payload['email'];
-      
-      console.log(`✅ Token verified for user: ${verifiedUserId}`);
-      
-      // Ensure the verified user ID matches the provided one
-      if (user_id && user_id !== verifiedUserId) {
-        console.warn(`⚠️ User ID mismatch: provided=${user_id}, verified=${verifiedUserId}`);
-        return res.status(400).json({ 
-          error: 'User ID mismatch' 
-        });
-      }
-    } catch (verifyError) {
-      console.error('❌ Token verification failed:', verifyError);
-      return res.status(401).json({
-        error: 'Invalid Google token',
-        details: verifyError.message
-      });
-    }
-
-    // Use the verified user ID
-    const finalUserId = verifiedUserId;
-    console.log(`🔵 Google auth sync for verified user: ${finalUserId}`);
+    console.log(`🔵 Google auth sync for user: ${user_id}`);
     
     // Create or get user
-    const user = await db.getOrCreateUser(finalUserId);
+    const user = await db.getOrCreateUser(user_id);
     
     // Update user profile with Google data
-    if (name || picture || verifiedEmail) {
+    if (name || picture || email) {
       try {
         await db.supabase
           .from('app_users')
           .update({
             name: name || user.name,
             avatar_url: picture || user.avatar_url,
-            email: verifiedEmail || user.email,
+            email: email || user.email,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', finalUserId);
+          .eq('id', user_id);
         
         console.log(`✅ User profile updated`);
       } catch (updateError) {
@@ -143,7 +105,7 @@ router.post('/google', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Google user verified and synced successfully',
+      message: 'Google user synced successfully',
       user_id: user.id
     });
 
