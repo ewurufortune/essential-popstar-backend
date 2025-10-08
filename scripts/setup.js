@@ -36,7 +36,10 @@ const requiredVars = [
   'REVENUECAT_WEBHOOK_SECRET',
   'PORT',
   'COFFEE_1_POWER',
-  'COFFEE_5_POWER'
+  'COFFEE_5_POWER',
+  'COFFEE_50_POWER',
+  'COFFEE_120_POWER',
+  'COFFEE_400_POWER'
 ];
 
 let missingVars = [];

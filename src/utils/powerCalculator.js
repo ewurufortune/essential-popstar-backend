@@ -41,7 +41,13 @@ function getProductPowerDelta(productId) {
     'coffee_1': parseInt(process.env.COFFEE_1_POWER) || 8,
     '1_coffee': parseInt(process.env.COFFEE_1_POWER) || 8, // Alternative naming
     'coffee_5': parseInt(process.env.COFFEE_5_POWER) || 40,
-    '5_coffees': parseInt(process.env.COFFEE_5_POWER) || 40 // Alternative naming
+    '5_coffees': parseInt(process.env.COFFEE_5_POWER) || 40, // Alternative naming
+    'coffee_50': parseInt(process.env.COFFEE_50_POWER) || 400,
+    '50_coffees': parseInt(process.env.COFFEE_50_POWER) || 400,
+    'coffee_120': parseInt(process.env.COFFEE_120_POWER) || 960,
+    '120_coffees': parseInt(process.env.COFFEE_120_POWER) || 960,
+    'coffee_400': parseInt(process.env.COFFEE_400_POWER) || 3200,
+    '400_coffees': parseInt(process.env.COFFEE_400_POWER) || 3200
   };
   
   return productMapping[productId] || 0;

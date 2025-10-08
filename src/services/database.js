@@ -47,14 +47,30 @@ class DatabaseService {
       throw new Error(`Failed to create user: ${insertError.message}`);
     }
 
-    // Create initial power balance
+    // Get power config to give new users max power as welcome bonus
+    const config = await this.getPowerConfig();
+    const welcomePower = config.max_power || 24;
+
+    // Create initial power balance with full power as welcome bonus
     await this.supabase
       .from('power_balances')
       .insert([{
         user_id: sanitizedUserId,
-        base_power: 0,
+        base_power: welcomePower,
         last_update: new Date().toISOString()
       }]);
+
+    // Log the welcome bonus in power ledger
+    await this.supabase
+      .from('power_ledger')
+      .insert([{
+        user_id: sanitizedUserId,
+        delta: welcomePower,
+        reason: 'grant:welcome_bonus',
+        created_at: new Date().toISOString()
+      }]);
+
+    console.log(`🎉 New user ${sanitizedUserId} created with ${welcomePower} welcome power!`);
 
     return newUser;
   }
@@ -181,12 +197,13 @@ class DatabaseService {
     
     try {
       // Start a transaction-like operation
-      const [currentPower, config] = await Promise.all([
-        this.getCurrentPower(sanitizedUserId),
+      const [balance, config] = await Promise.all([
+        this.getPowerBalance(sanitizedUserId),
         this.getPowerConfig()
       ]);
 
-      const newBasePower = Math.min(config.max_power, currentPower.current + amount);
+      // Add purchased power directly to base_power (no cap for purchases)
+      const newBasePower = balance.base_power + amount;
 
       // Insert ledger entry
       const ledgerData = {
