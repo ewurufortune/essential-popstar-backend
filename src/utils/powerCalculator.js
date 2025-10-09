@@ -16,7 +16,13 @@ function computeCurrentPower(now, basePower, lastUpdate, config) {
   const elapsed = Math.max(0, now.getTime() - new Date(lastUpdate).getTime());
   const ticks = Math.floor(elapsed / intervalMs);
   const refilled = ticks * config.refill_amount;
-  const current = Math.min(config.max_power, basePower + refilled);
+  
+  // Don't cap the current power - basePower can be over max from purchases
+  // Only limit natural refills to not exceed max
+  const naturalRefillCap = Math.max(0, config.max_power - basePower);
+  const actualRefill = Math.min(refilled, naturalRefillCap);
+  const current = basePower + actualRefill;
+  
   const remainder = elapsed % intervalMs;
   const needsRefill = current < config.max_power;
   const nextRefillInMs = needsRefill ? (intervalMs - remainder) : 0;
@@ -38,16 +44,25 @@ function computeCurrentPower(now, basePower, lastUpdate, config) {
  */
 function getProductPowerDelta(productId) {
   const productMapping = {
+    // iOS products
     'coffee_1': parseInt(process.env.COFFEE_1_POWER) || 8,
-    '1_coffee': parseInt(process.env.COFFEE_1_POWER) || 8, // Alternative naming
+    '1_coffee': parseInt(process.env.COFFEE_1_POWER) || 8,
     'coffee_5': parseInt(process.env.COFFEE_5_POWER) || 40,
-    '5_coffees': parseInt(process.env.COFFEE_5_POWER) || 40, // Alternative naming
+    '5_coffees': parseInt(process.env.COFFEE_5_POWER) || 40,
+    '20_coffees': parseInt(process.env.COFFEE_20_POWER) || 160,
     'coffee_50': parseInt(process.env.COFFEE_50_POWER) || 400,
     '50_coffees': parseInt(process.env.COFFEE_50_POWER) || 400,
     'coffee_120': parseInt(process.env.COFFEE_120_POWER) || 960,
     '120_coffees': parseInt(process.env.COFFEE_120_POWER) || 960,
     'coffee_400': parseInt(process.env.COFFEE_400_POWER) || 3200,
-    '400_coffees': parseInt(process.env.COFFEE_400_POWER) || 3200
+    '400_coffees': parseInt(process.env.COFFEE_400_POWER) || 3200,
+    
+    // Android products
+    'com.ep.1coffee': parseInt(process.env.COFFEE_1_POWER) || 8,
+    'com.ep.20coffees': parseInt(process.env.COFFEE_20_POWER) || 160,
+    'com.ep.50coffees': parseInt(process.env.COFFEE_50_POWER) || 400,
+    'com.ep.120coffees': parseInt(process.env.COFFEE_120_POWER) || 960,
+    'com.ep.400coffees': parseInt(process.env.COFFEE_400_POWER) || 3200
   };
   
   return productMapping[productId] || 0;
