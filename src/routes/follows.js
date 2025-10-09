@@ -180,6 +180,37 @@ router.get('/status/:userId', async (req, res) => {
       followedNpcs: followedNpcs,
       currentCount: followedNpcs.length,
       maxFollows: user.max_follows,
+      level: user.level,
+      experience: user.experience
+    });
+
+  } catch (error) {
+    console.error('Error fetching follow status:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get user stats (level, experience, max_follows)
+router.get('/user-stats', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = req.user;
+
+    res.json({
+      success: true,
+      level: user.level,
+      experience: user.experience,
+      maxFollows: user.max_follows,
+      currentFollows: (user.followed_npc_ids || []).length,
+      followedNpcs: user.followed_npc_ids || []
+    });
+
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+      maxFollows: user.max_follows,
       level: user.level
     });
 
