@@ -210,15 +210,6 @@ router.get('/user-stats', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-      maxFollows: user.max_follows,
-      level: user.level
-    });
-
-  } catch (error) {
-    console.error('Error getting follow status:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 /**
  * Get user's followed NPCs with full details
