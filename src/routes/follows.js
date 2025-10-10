@@ -6,8 +6,8 @@ const { authenticate } = require('../middleware/auth');
 // Follow an NPC
 router.post('/follow', authenticate, async (req, res) => {
   try {
-    const { npcId, npcData } = req.body;
-    const userId = req.user.id; // Get from authenticated user
+    const { npcId, npcData, validNPCIds } = req.body;
+    const userId = req.user.id;
 
     if (!npcId) {
       return res.status(400).json({ error: 'NPC ID is required' });
@@ -23,14 +23,21 @@ router.post('/follow', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Already following this NPC' });
     }
 
-    // Check follow limit
-    if (currentFollows.length >= user.max_follows) {
+    // VALIDATION: Filter current follows to only count NPCs that exist in current save
+    const validFollowedNPCs = validNPCIds 
+      ? currentFollows.filter(id => validNPCIds.includes(id))
+      : currentFollows; // Fallback to all if validNPCIds not provided
+    
+    console.log(`[FOLLOW] Validating follows: ${currentFollows.length} total, ${validFollowedNPCs.length} valid in current save`);
+
+    // Check follow limit using ONLY valid NPCs
+    if (validFollowedNPCs.length >= user.max_follows) {
       return res.status(400).json({ 
         error: `Follow limit reached (${user.max_follows}). Level up to follow more NPCs!`,
         maxFollows: user.max_follows,
-        currentCount: currentFollows.length,
+        currentCount: validFollowedNPCs.length,
         currentLevel: user.level,
-        nextLevelAt: user.level * user.level * 100 // Experience needed for next level
+        nextLevelAt: user.level * user.level * 100
       });
     }
 
